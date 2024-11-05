@@ -26,12 +26,12 @@ alt="https://www.tiktok.com/@littleskillcomputer?_t=8oeVIoRfhoa&_r=1" height="30
 
 
 <h1 id="socks5">install socks a single command line </h1>
-<p><code class="language-plaintext highlighter-rouge">curl https://raw.githubusercontent.com/cheysethi1999/BRAVO/master/socks.txt | sudo bash</code></p>
+<p><code class="language-plaintext highlighter-rouge">curl https://raw.githubusercontent.com/BRAVO-IT/VPN/refs/heads/master/socks.txt | sudo bash</code></p>
 
 <p>If you would like to manually set port and/or password:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">PORT</span><span class="o">=</span>8080<span class="p">;</span> <span class="nb">export </span><span class="nv">PASSWORD</span><span class="o">=</span>mypass
-curl https://raw.githubusercontent.com/cheysethi1999/BRAVO/master/socks.txt | <span class="nb">sudo</span> <span class="nt">--preserve-env</span> bash
+curl https://raw.githubusercontent.com/BRAVO-IT/VPN/refs/heads/master/socks.txt | <span class="nb">sudo</span> <span class="nt">--preserve-env</span> bash
 </code></pre></div></div>
 
 <p>This creates self-hosted <a href="https://en.wikipedia.org/wiki/SOCKS">SOCKS5</a> server powered by <a href="http://www.inet.no/dante/">Dante</a>. Supported Linux distributions:</p>
@@ -45,12 +45,12 @@ curl https://raw.githubusercontent.com/cheysethi1999/BRAVO/master/socks.txt | <s
 
 <h1 id="shadowsocks">shadowsocks <a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" target="blank"><img align="right" src="https://thumbnail.imgbin.com/23/6/16/imgbin-button-return-s-mSaKDepmjzAignfPP9c5QrPnx_t.jpg" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" height="30" width="40" /></a></h1>
 
-<p><code class="language-plaintext highlighter-rouge">curl https://raw.githubusercontent.com/cheysethi1999/BRAVO/master/shadowsocks.txt | sudo bash</code></p>
+<p><code class="language-plaintext highlighter-rouge">curl https://raw.githubusercontent.com/BRAVO-IT/VPN/refs/heads/master/shadowsocks.txt | sudo bash</code></p>
 
 <p>If you would like to manually set port and/or password:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">PORT</span><span class="o">=</span>8080<span class="p">;</span> <span class="nb">export </span><span class="nv">PASSWORD</span><span class="o">=</span>mypass
-curl https://raw.githubusercontent.com/cheysethi1999/BRAVO/master/shadowsocks.txt | <span class="nb">sudo</span> <span class="nt">--preserve-env</span> bash
+curl https://raw.githubusercontent.com/BRAVO-IT/VPN/refs/heads/master/shadowsocks.txt | <span class="nb">sudo</span> <span class="nt">--preserve-env</span> bash
 </code></pre></div></div>
 
 <p>This creates self-hosted <a href="https://shadowsocks.org/">shadowsocks</a> server. Clients:</p>
