@@ -1,5 +1,5 @@
 #!/bin/bash
-# Homepage: github.com/cheysethi1999/BRAVO
+# Homepage: https://github.com/BRAVO-IT/VPN
 # Author: BRAVO_IT
 # Contributors: Vlad Safronov (Oracle Linux 7.5, Centos 7)
 
