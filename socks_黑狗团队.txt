@@ -180,7 +180,7 @@ if [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu xenial" ]; then
 	echo "\`*黑狗团队\`"
 	echo ""
 	# Display user title
-	echo "\*USER\"
+	echo "*USER"
 	
 	# Display protocol and network details
 	printf "Protocol : \`Sock5\`\n"
@@ -212,7 +212,7 @@ elif [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu bionic" ]; then
 	echo "\`*黑狗团队\`"
 	echo ""
 	# Display user title
-	echo "\*USER\"
+	echo "*USER"
 	
 	# Display protocol and network details
 	printf "Protocol : \`Sock5\`\n"
@@ -243,7 +243,7 @@ echo "Your socks proxy configuration:"
 	echo "\`*黑狗团队\`"
 	echo ""
 	# Display user title
-	echo "\*USER\"
+	echo "*USER"
 	
 	# Display protocol and network details
 	printf "Protocol : \`Sock5\`\n"
@@ -286,7 +286,7 @@ elif [ "$ID $VERSION_ID" = "ol 7.5" -o "$ID $VERSION_ID" = "centos 7" ]; then
 	echo "\`*黑狗团队\`"
 	echo ""
 	# Display user title
-	echo "\*USER\"
+	echo "*USER"
 	
 	# Display protocol and network details
 	printf "Protocol : \`Sock5\`\n"
