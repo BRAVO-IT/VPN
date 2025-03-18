@@ -176,10 +176,10 @@ if [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu xenial" ]; then
 	open_ufw_port "$PORT"
 
 	systemctl restart danted.service
-
+       # General information
 	echo "Your socks proxy configuration:"
 	echo "\`*黑狗团队\`"
-
+# Authentication details
 	echo "\`*USER\`"
 	echo "Protocol: \`Sock5\`"
 	echo "Address : \`$(get_external_address)\`"
