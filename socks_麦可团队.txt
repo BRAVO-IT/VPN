@@ -179,13 +179,16 @@ if [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu xenial" ]; then
 
 	echo "Your socks proxy configuration:"
 	echo "\`*麦可团队\`"
-
-	echo "\`*USER\`"
-	echo "Protocol: \`Sock5\`"
-	echo "Address : \`$(get_external_address)\`"
-	echo "Port    : \`$PORT\`"
-	echo "User    : \`$USER\`"
-	echo "Pass    : \`$PASSWORD\`"
+	echo ""
+	# Display user title
+	echo "*USER"
+	
+	# Display protocol and network details
+	printf "Protocol : \`Sock5\`\n"
+	printf "Address  : \`$(get_external_address)\`\n"
+	printf "Port         : \`$PORT\`\n"
+	printf "User         : \`$USER\`\n"
+	printf "Pass         : \`$PASSWORD\`\n"
 	echo "Any question contact telegram @BRAVO_IT"
 
 # Ubuntu 18.04 Bionic
@@ -208,13 +211,16 @@ elif [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu bionic" ]; then
 
 	echo "Your socks proxy configuration:"
 	echo "\`*麦可团队\`"
-
-	echo "\`*USER\`"
-	echo "Protocol: \`Sock5\`"
-	echo "Address : \`$(get_external_address)\`"
-	echo "Port    : \`$PORT\`"
-	echo "User    : \`$USER\`"
-	echo "Pass    : \`$PASSWORD\`"
+	echo ""
+	# Display user title
+	echo "*USER"
+	
+	# Display protocol and network details
+	printf "Protocol : \`Sock5\`\n"
+	printf "Address  : \`$(get_external_address)\`\n"
+	printf "Port         : \`$PORT\`\n"
+	printf "User         : \`$USER\`\n"
+	printf "Pass         : \`$PASSWORD\`\n"
 	echo "Any question contact telegram @BRAVO_IT"
 
 # Ubuntu 20.04 Focal
@@ -237,13 +243,16 @@ elif [ "$ID $VERSION_CODENAME" = "ubuntu focal" ]; then
 
 	echo "Your socks proxy configuration:"
 	echo "\`*麦可团队\`"
-
-	echo "\`*USER\`"
-	echo "Protocol: \`Sock5\`"
-	echo "Address : \`$(get_external_address)\`"
-	echo "Port    : \`$PORT\`"
-	echo "User    : \`$USER\`"
-	echo "Pass    : \`$PASSWORD\`"
+	echo ""
+	# Display user title
+	echo "*USER"
+	
+	# Display protocol and network details
+	printf "Protocol : \`Sock5\`\n"
+	printf "Address  : \`$(get_external_address)\`\n"
+	printf "Port         : \`$PORT\`\n"
+	printf "User         : \`$USER\`\n"
+	printf "Pass         : \`$PASSWORD\`\n"
 	echo "Any question contact telegram @BRAVO_IT"
 
 # CentOS 7 and Oracle Linux 7.5
@@ -277,13 +286,16 @@ elif [ "$ID $VERSION_ID" = "ol 7.5" -o "$ID $VERSION_ID" = "centos 7" ]; then
 
 	echo "Your socks proxy configuration:"
 	echo "\`*麦可团队\`"
-
-	echo "\`*USER\`"
-	echo "Protocol: \`Sock5\`"
-	echo "Address : \`$(get_external_address)\`"
-	echo "Port    : \`$PORT\`"
-	echo "User    : \`$USER\`"
-	echo "Pass    : \`$PASSWORD\`"
+	echo ""
+	# Display user title
+	echo "*USER"
+	
+	# Display protocol and network details
+	printf "Protocol : \`Sock5\`\n"
+	printf "Address  : \`$(get_external_address)\`\n"
+	printf "Port         : \`$PORT\`\n"
+	printf "User         : \`$USER\`\n"
+	printf "Pass         : \`$PASSWORD\`\n"
 	echo "Any question contact telegram @BRAVO_IT"
 
 else
