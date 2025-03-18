@@ -178,10 +178,12 @@ if [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu xenial" ]; then
 	systemctl restart danted.service
 
 	echo "Your socks proxy configuration:"
-	echo "Address: $( get_external_address )"
-	echo "Port: $PORT"
-	echo "User: $USER"
-	echo "Password: $PASSWORD"
+	echo "`*黑蝦团队`"
+	echo "Protocol: `Sock5`"
+	echo "Address: `$( get_external_address )`"
+	echo "Port: `$PORT`"
+	echo "User: `$USER`"
+	echo "Password: `$PASSWORD`"
 	echo "Any question contact telegram @BRAVO_IT"
 
 # Ubuntu 18.04 Bionic
