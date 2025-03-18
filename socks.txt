@@ -179,6 +179,7 @@ if [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu xenial" ]; then
 
 	echo "Your socks proxy configuration:"
 	echo "\`*黑蝦团队\`"
+
 	echo "\`*USER\`"
 	echo "Protocol: \`Sock5\`"
 	echo "Address : \`$(get_external_address)\`"
@@ -207,6 +208,7 @@ elif [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu bionic" ]; then
 
 	echo "Your socks proxy configuration:"
 	echo "\`*黑蝦团队\`"
+
 	echo "\`*USER\`"
 	echo "Protocol: \`Sock5\`"
 	echo "Address : \`$(get_external_address)\`"
@@ -235,6 +237,7 @@ elif [ "$ID $VERSION_CODENAME" = "ubuntu focal" ]; then
 
 	echo "Your socks proxy configuration:"
 	echo "\`*黑蝦团队\`"
+
 	echo "\`*USER\`"
 	echo "Protocol: \`Sock5\`"
 	echo "Address : \`$(get_external_address)\`"
@@ -274,6 +277,7 @@ elif [ "$ID $VERSION_ID" = "ol 7.5" -o "$ID $VERSION_ID" = "centos 7" ]; then
 
 	echo "Your socks proxy configuration:"
 	echo "\`*黑蝦团队\`"
+
 	echo "\`*USER\`"
 	echo "Protocol: \`Sock5\`"
 	echo "Address : \`$(get_external_address)\`"
