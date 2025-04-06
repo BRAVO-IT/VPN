@@ -180,7 +180,10 @@ if [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu xenial" ]; then
 	echo "Your socks proxy configuration:"
 	    echo "*山鸡团队"
     echo ""
-    echo "*USER"    
+    # Display user title
+    echo "*USER"
+    
+    # Display protocol and network details 
     printf "Protocol : SOCKS5\n"
     printf "Address  : $(get_external_address)\n"
     printf "Port         : $PORT\n"
@@ -209,7 +212,10 @@ elif [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu bionic" ]; then
 	echo "Your socks proxy configuration:"
     echo "*山鸡团队"
     echo ""
-    echo "*USER"    
+    # Display user title
+    echo "*USER"
+    
+    # Display protocol and network details  
     printf "Protocol : SOCKS5\n"
     printf "Address  : $(get_external_address)\n"
     printf "Port         : $PORT\n"
@@ -238,7 +244,10 @@ elif [ "$ID $VERSION_CODENAME" = "ubuntu focal" ]; then
 	echo "Your socks proxy configuration:"
     echo "*山鸡团队"
     echo ""
-    echo "*USER"    
+    # Display user title
+    echo "*USER"
+    
+    # Display protocol and network details   
     printf "Protocol : SOCKS5\n"
     printf "Address  : $(get_external_address)\n"
     printf "Port         : $PORT\n"
@@ -278,7 +287,10 @@ elif [ "$ID $VERSION_ID" = "ol 7.5" -o "$ID $VERSION_ID" = "centos 7" ]; then
 	echo "Your socks proxy configuration:"
     echo "*山鸡团队"
     echo ""
-    echo "*USER"    
+    # Display user title
+    echo "*USER"
+    
+    # Display protocol and network details
     printf "Protocol : SOCKS5\n"
     printf "Address  : $(get_external_address)\n"
     printf "Port         : $PORT\n"
