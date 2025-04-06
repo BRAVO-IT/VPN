@@ -212,6 +212,7 @@ elif [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu bionic" ]; then
 	echo "Your socks proxy configuration:"
 	echo "\`*麦可团队\`"
 	echo ""
+	echo ""
 	# Display user title
 	echo "*USER"
 	
@@ -244,6 +245,7 @@ elif [ "$ID $VERSION_CODENAME" = "ubuntu focal" ]; then
 	echo "Your socks proxy configuration:"
 	echo "\`*麦可团队\`"
 	echo ""
+echo ""
 	# Display user title
 	echo "*USER"
 	
@@ -287,6 +289,7 @@ elif [ "$ID $VERSION_ID" = "ol 7.5" -o "$ID $VERSION_ID" = "centos 7" ]; then
 	echo "Your socks proxy configuration:"
 	echo "\`*麦可团队\`"
 	echo ""
+echo ""
 	# Display user title
 	echo "*USER"
 	
