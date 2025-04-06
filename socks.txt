@@ -178,7 +178,7 @@ if [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu xenial" ]; then
 	systemctl restart danted.service
 
 	echo "Your socks proxy configuration:"
-	echo "\`*黑蝦团队\`"
+	echo "\`*TEAM\`"
 
 	echo "\`*USER\`"
 	echo "Protocol: \`Sock5\`"
@@ -207,7 +207,7 @@ elif [ "$DISTRIB_ID $DISTRIB_CODENAME" = "Ubuntu bionic" ]; then
 	systemctl restart danted.service
 
 	echo "Your socks proxy configuration:"
-	echo "\`*黑蝦团队\`"
+	echo "\`*TEAM\`"
 
 	echo "\`*USER\`"
 	echo "Protocol: \`Sock5\`"
@@ -236,7 +236,7 @@ elif [ "$ID $VERSION_CODENAME" = "ubuntu focal" ]; then
 	systemctl restart danted.service
 
 	echo "Your socks proxy configuration:"
-	echo "\`*黑蝦团队\`"
+	echo "\`*TEAM\`"
 
 	echo "\`*USER\`"
 	echo "Protocol: \`Sock5\`"
@@ -276,7 +276,7 @@ elif [ "$ID $VERSION_ID" = "ol 7.5" -o "$ID $VERSION_ID" = "centos 7" ]; then
 	systemctl restart sockd.service
 
 	echo "Your socks proxy configuration:"
-	echo "\`*黑蝦团队\`"
+	echo "\`*TEAM\`"
 
 	echo "\`*USER\`"
 	echo "Protocol: \`Sock5\`"
