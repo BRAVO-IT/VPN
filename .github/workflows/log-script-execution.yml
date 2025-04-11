@@ -1,0 +1,17 @@
+name: Log Script Execution
+
+on:
+  workflow_dispatch:  # This allows manual triggering
+  push:               # Or you can trigger on pushes to specific branches
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Run Script
+        run: |
+          echo "Script executed by ${{ github.actor }} on ${{ github.repository }}"
+          echo "IP Address: $(curl -s http://ipinfo.io/ip)"
