@@ -1,157 +1,264 @@
+# Resume (Full-width)
 
-<h1 align="center">Hi 👋, I'm BRAVO_IT</h1>
-<h3 align="center">Network Engineer from Cambodia</h3>
+![Frame 1 copy 2.png](Frame_1_copy_2.png)
 
-<h3 align="left">Connect with me:</h3>
-<p align="left">
-<a href="https://fb.com/https://github.com/cheysethi1999/bravo.git" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/facebook.svg" alt="https://github.com/cheysethi1999/bravo.git" height="30" width="40" /></a>
-<a href="https://www.youtube.com/c/https://youtu.be/xdqzmv6ck_a?si=6oshn0pw0g78dy7b" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/youtube.svg" alt="https://youtu.be/xdqzmv6ck_a?si=6oshn0pw0g78dy7b" height="30" width="40" /></a>
-<a href="https://t.me/BRAVO_IT"><img align="center" src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/512px-Telegram_logo.svg.png?20220101141644"
-alt="https://t.me/BRAVO_IThttps://t.me/BRAVO_IT" height="30" width="35" /></a>
-<a href="https://www.tiktok.com/@littleskillcomputer?_t=8oeVIoRfhoa&_r=1"><img align="center" src="https://iconape.com/wp-content/files/nw/110905/svg/tiktok-logo-tik-tok-logo-icon-png-svg.png"
-alt="https://www.tiktok.com/@littleskillcomputer?_t=8oeVIoRfhoa&_r=1" height="30" width="35" /></a>
-</p>
-<h3 align="left">Support:</h3>
-<p><a href="https://www.buymeacoffee.com/https://buymeacoffee.com/bravo_it"> <img align="left" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" width="210" alt="https://buymeacoffee.com/bravo_it" /></a></p><br><br>
-<h3 align="left">Buy Proxy click button below</h3>
-<p><a href="https://t.me/BRAVO_IT"> <img align="left" src="https://github.com/cheysethi1999/BRAVO/blob/master/images/sell.png" height="50" width="210" alt="https://t.me/BRAVO_IT" /></a></p><br><br>
+# Chey Sethi
 
-<h3 align="left">Direct link below</h3>
-<a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#install-socks-a-single-command-line-" target="blank"><img align="center" src="https://github.com/cheysethi1999/BRAVO/blob/master/images/socks.png" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#install-socks-a-single-command-line-"/></a>
-<a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#http-proxy" target="blank"><img align="center" src="https://github.com/cheysethi1999/BRAVO/blob/master/images/http.png" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#http-proxy"/></a>
-<a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#shadowsocks" target="blank"><img align="center" src="https://github.com/cheysethi1999/BRAVO/blob/master/images/shadowsocks.png" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#shadowsocks"/></a>
-<a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#l2tp-server-by-teddysun" target="blank"><img align="center" src="https://github.com/cheysethi1999/BRAVO/blob/master/images/l2tp.png" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#l2tp-server-by-teddysun"/></a>
-<a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#mtproxy-install-in-ubuntu" target="blank"><img align="center" src="https://github.com/cheysethi1999/BRAVO/blob/master/images/mtproxy.png" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#mtproxy-install-in-ubuntu"/></a>
-<a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#install-openvpn-server-a-single-command-by-yeasin989" target="blank"><img align="center" src="https://github.com/cheysethi1999/BRAVO/blob/master/images/openvpn.png" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#install-openvpn-server-a-single-command-by-yeasin989"/></a>
+Network Engineer 
 
+**#**   (855) 87756357
+**@**  [ch](mailto:chichi@madebychichi.com)eysethi99@gmail.com
 
-<h1 id="socks5">install socks a single command line </h1>
-<p><code class="language-plaintext highlighter-rouge">curl https://raw.githubusercontent.com/BRAVO-IT/VPN/refs/heads/master/socks.txt | sudo bash</code></p>
+<aside>
+<img src="notion://custom_emoji/8cb46ee0-0721-4b65-8499-3d98376093a7/1e41d880-1811-80e2-b254-007a335c3d58" alt="notion://custom_emoji/8cb46ee0-0721-4b65-8499-3d98376093a7/1e41d880-1811-80e2-b254-007a335c3d58" width="40px" /> [Telegram](https://t.me/BRAVO_IT)
 
-<p>If you would like to manually set port and/or password:</p>
+</aside>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">PORT</span><span class="o">=</span>8080<span class="p">;</span> <span class="nb">export </span><span class="nv">PASSWORD</span><span class="o">=</span>mypass
-curl https://raw.githubusercontent.com/BRAVO-IT/VPN/refs/heads/master/socks.txt | <span class="nb">sudo</span> <span class="nt">--preserve-env</span> bash
-</code></pre></div></div>
+<aside>
+<img src="logo-whatsapp-png-pic-0.png" alt="logo-whatsapp-png-pic-0.png" width="40px" /> [WhatsApp](http://dribbble.com)
 
-<p>This creates self-hosted <a href="https://en.wikipedia.org/wiki/SOCKS">SOCKS5</a> server powered by <a href="http://www.inet.no/dante/">Dante</a>. Supported Linux distributions:</p>
+</aside>
 
-<ul>
-  <li>Ubuntu 16.04 Xenial</li>
-  <li>Ubuntu 18.04 Bionic</li>
-  <li>Ubuntu 20.04 Focal</li>
-  <li>CentOS 7 and Oracle Linux 7.5 (thanks to <a href="https://github.com/vladsf">Vlad Safronov</a>)</li>
-</ul>
+<aside>
+<img src="youtube-logo-png-photo-0.png" alt="youtube-logo-png-photo-0.png" width="40px" /> [YouTube](https://youtube.com/@littleskill168?si=2aBFzqnivNxSHM9S)
 
-<h1 id="shadowsocks">shadowsocks <a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" target="blank"><img align="right" src="https://thumbnail.imgbin.com/23/6/16/imgbin-button-return-s-mSaKDepmjzAignfPP9c5QrPnx_t.jpg" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" height="30" width="40" /></a></h1>
+</aside>
 
-<p><code class="language-plaintext highlighter-rouge">curl https://raw.githubusercontent.com/BRAVO-IT/VPN/refs/heads/master/shadowsocks.txt | sudo bash</code></p>
+<aside>
+<img src="linkedin_(3).png" alt="linkedin_(3).png" width="40px" /> [**LinkedIn**](http://linkedin.com/in/jesussocorro)
 
-<p>If you would like to manually set port and/or password:</p>
+</aside>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">PORT</span><span class="o">=</span>8080<span class="p">;</span> <span class="nb">export </span><span class="nv">PASSWORD</span><span class="o">=</span>mypass
-curl https://raw.githubusercontent.com/BRAVO-IT/VPN/refs/heads/master/shadowsocks.txt | <span class="nb">sudo</span> <span class="nt">--preserve-env</span> bash
-</code></pre></div></div>
+## Profile
 
-<p>This creates self-hosted <a href="https://shadowsocks.org/">shadowsocks</a> server. Clients:</p>
-<ul>
-  <li>Android: <a href="https://play.google.com/store/apps/details?id=com.github.shadowsocks">shadowsocks by Max Lv</a></li>
-  <li>Other devices: <a href="https://shadowsocks.org/en/download/clients.html">shadowsocks clients</a></li>
-</ul>
+---
 
-<p>Supported Linux distributions:</p>
+Dear Hiring Manager,
 
-<ul>
-  <li>Ubuntu 16.04 Xenial</li>
-  <li>Ubuntu 18.04 Bionic</li>
-  <li>CentOS 7 and RHEL 7 (thanks to Octavian Dodita octavian2204[anti-spam-dog]gmail.com )</li>
-</ul>
- <h1 id="HTTP Proxy">HTTP Proxy <a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" target="blank"><img align="right" src="https://thumbnail.imgbin.com/23/6/16/imgbin-button-return-s-mSaKDepmjzAignfPP9c5QrPnx_t.jpg" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" height="30" width="40" /></a></h1>
+I am writing to express my interest in the Network Engineer position at [Company Name]. With a Bachelor’s degree in Computer Science and over five years of hands-on experience in designing, implementing, and maintaining network infrastructures, I am confident in my ability to contribute effectively to your team and help drive the success of your network operations.
 
- <p>Set up squid server in Centos 7 follow command below:</p>
- <p>1. command line Install squid</p>
- <p><code class="language-plaintext highlighter-rouge">yum -y install squid httpd-tools</code></p>
-<p>2. command line go config file</p>
-<p><code class="language-plaintext highlighter-rouge">vim /etc/squid/squid.conf</code></p>
-<p>3. Config follow this command line</p>
-<p><code class="language-plaintext highligter-rouge">acl lan src all
-auth_param basic program /usr/lib64/squid/basic_ncsa_auth /etc/squid/.htpasswd
-auth_param basic children 5
-auth_param basic realm Squid Basic Authentication
-auth_param basic credentialsttl 5 hours
-acl password proxy_auth REQUIRED
-http_access allow password</code></p>
-<p>4. Add this command to access list</p>
-<p><code class="language-plaintext highligter-rouge">http_access allow lan</code></p>
-<p>5. Add this commnad to the end off config file</p>
-<p><code class="language-plaintext highligter-rouge">#Add Follows To The end
-request_header_access Referer deny all
-request_header_access X-Forwarded-For deny all
-request_header_access Via deny all
-request_header_access Cache-Control deny all
-#Do not display IP address
-forwarded_for off</code></p>
-<p>6. Create user/pass for client</p>
-<p><code class="language-plaintext highligter-rouge">htpasswd -c /etc/squid/.htpasswd vpnuser</code></p>
-<p>Start Squid and Enable</p>
-<p><code class="language-plaintext highligter-rouge">systemctl start squid && systemctl enable squid</code></p>
-<p>7. Turn on firewall</p>
-<p><code class="language-plaintext highligter-rouge">systemctl start firewalld
-systemctl status firewalld</code></p>
-<p>8. Reload firewall and tcp port</p>
-<p><code class="language-plaintext highligter-rouge">firewall-cmd --zone=public --add-port=3128/tcp --permanent && firewall-cmd --reload</code></p>
-<p>9. Check Squid status and Connection</p>
-<p><code class="language-plaintext highligter-rouge">systemctl status squid
-tail -f /var/log/squid/access.log</code></p>
+## Education
 
-<p>That's all enjoy your http proxy</p>
+---
 
-<h1>L2TP Server by <a href="https://github.com/teddysun">teddysun</a><a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" target="blank"><img align="right" src="https://thumbnail.imgbin.com/23/6/16/imgbin-button-return-s-mSaKDepmjzAignfPP9c5QrPnx_t.jpg" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" height="30" width="40" /></a></h1>
+<aside>
+<img src="https://www.notion.so/icons/school_gray.svg" alt="https://www.notion.so/icons/school_gray.svg" width="40px" /> Build Bright University (Cambodia)
 
-<p>1. Install l2tp server</p>
-<p><code class="language-plaintext highligter-rouge">wget --no-check-certificate https://raw.githubusercontent.com/teddysun/across/master/l2tp.sh</code></p>
-<p>2. Change to executable right restriction</p>
-<p><code class="language-plaintext highligter-rouge">chmod +x l2tp.sh</code></p>
-<p>3. Execute installation script</p>
-<p><code class="language-plaintext highligter-rouge">./l2tp.sh</code></p>
-<p>If you want to modify user settings, please use below command(s):</p>
-<p><code class="language-plaintext highligter-rouge">l2tp -a </code>(Add a user)</p>
-<p><code class="language-plaintext highligter-rouge">l2tp -d </code>(Delete a user)</p>
-<p><code class="language-plaintext highligter-rouge">l2tp -l </code>(List all users)</p>
-<p><code class="language-plaintext highligter-rouge">l2tp -m </code>(Modify a user password)</p>
+*Fall 2017 - Spring 2021*
 
-<h1>MTPROXY install in Ubuntu <a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" target="blank"><img align="right" src="https://thumbnail.imgbin.com/23/6/16/imgbin-button-return-s-mSaKDepmjzAignfPP9c5QrPnx_t.jpg" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" height="30" width="40" /></a></h1>
-<p>1. Update </p>
-<p><code class="language-plaintext highligter-rouge">apt update
-apt install apt-transport-https ca-certificates curl software-properties-common</code></p>
-<p>2. Install DOCKER</p>
-<p><code class="language-plaintext highligter-rouge">curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
-apt install docker-ce
-apt install docker-compose-plugin
-curl -L -o mtp_install.sh https://git.io/fj5ru && bash mtp_install.sh</code></p>
-<p>If error please install NTP command below</p>
-<p><code class="language-plaintext highligter-rouge">apt install systemd-timesyncd
-timedatectl set-ntp true
-systemctl unmask systemd-timesyncd.service</code></p>
-<p>Then you can enable and start the service:</p>
-<p><code class="language-plaintext highligter-rouge">systemctl enable systemd-timesyncd.service
-systemctl start systemd-timesyncd.service
-systemctl status chronyd.service
-systemctl status ntp.service</code></p>
+---
 
-<h1>Install OPENVPN Server a single command <a href="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" target="blank"><img align="right" src="https://thumbnail.imgbin.com/23/6/16/imgbin-button-return-s-mSaKDepmjzAignfPP9c5QrPnx_t.jpg" alt="https://github.com/cheysethi1999/BRAVO/blob/master/README.md#direct-link-below" height="30" width="40" /></a></h1>
-<p>1 Openvpn free 1024 client</p>
-<p><code class="language-plaintext highligter-rouge">cd /tmp/ && yum install git -y && git clone https://github.com/yeasin989/OPEN-VPN-ACCESS-SERVER.git && cd OPEN-VPN-ACCESS-SERVER/ && sed -i -e 's/\r$//' centos7.sh && chmod 755 centos7.sh && ./centos7.sh</code></p>
-Thank You.
+- Computer Science and Network Engineer
+</aside>
 
- <h1 id="Contact me">Contact me</h1>
-<ul>
-  <li>Telegram: <a href="https://t.me/BRAVO_IT">BRAVO_IT</a></li>
-  <li>Youtube: <a href="https://youtube.com/@littleskill168?si=VEru_lzwOXJg5Wk9">Littleskill</a></li>
-</ul>
+## Employment
 
+---
 
+<aside>
+<img src="https://www.notion.so/icons/briefcase_gray.svg" alt="https://www.notion.so/icons/briefcase_gray.svg" width="40px" /> White Sand Palace, IT Operation
 
+*July 2021 - 2023*
 
- 
+---
+
+Troubleshooting, resolving, and communicating networking issues to other employees
+and management
+• Monitoring computer systems to improve network performance for allsystems
+• Monitor and maintain computer system and networks, telephone system;
+• Install and configure computer hardware operating systems and applications;
+• Assist Network in Casino and Online Group
+• Office Computer Mainternance
+• TP-Link Router Configuration
+• Network Cabling
+• Hardware and Software Set up
+• Troubleshooting
+• Telephone Skill
+• Camera Configuration
+
+</aside>
+
+**TYPE OF MATERIAL**
+
+Configuration : ( Fortigate,Server,Mikrotik,Rujie AP,Router,AP,AC,Switch,Cisco
+Switch,ASA firewall,Huawei,Linux System)
+
+Programing
+
+Python, BJS, Html, Css, C#, C++
+
+<aside>
+<img src="https://www.notion.so/icons/briefcase_gray.svg" alt="https://www.notion.so/icons/briefcase_gray.svg" width="40px" /> China Town, IT Suppervisor
+
+*July 2019 - Present*
+
+---
+
+- Troubleshooting, resolving, and communicating networking issues to other employees
+and management
+• Monitoring computer systems to improve network performance for allsystems
+• Monitor and maintain computer system and networks, telephone system;
+• Install and configure computer hardware operating systems and applications;
+• Office Computer Mainternance
+• TP-Link Router Configuration
+• AWS Cloud , TENCENT CLOUD
+-Install (SRS)RTMP Server in Ubuntu
+-Install VPN Server in CentOS (OpenVPN,Http,Socks5,MTProxy)
+-EIP STATIC
+-OPEN SECURITY ALLOW PORT
+• Mikrotik Configuration (Install Well-function)
+• Config 2 ISP Auto failover
+• Config IPsec site to site
+• Config 2 ISP Loadbalacing
+• Config Static Route
+• Config Graping/Traffic
+• Config Wan,Lan,Wlan,Vlan,PPoE
+Server,Hotspot,Routing,Brigde,Port Forwarding,Layer
+7,OSPF,RIB Routing
+• Cisco Configuration (Command config Trunk port, Access
+port,Create vlan,Create user remote telnet,ssh)
+• Huawei Conifguration (Command config Trunk port, Access
+port,Create vlan,Create user remote telnet,ssh)
+</aside>
+
+## Skill and Programing
+
+---
+
+<aside>
+<img src="png-transparent-logo-python-logos-and-brands-icon-thumbnail.png" alt="png-transparent-logo-python-logos-and-brands-icon-thumbnail.png" width="40px" /> Python
+
+---
+
+*Intermediate*
+
+</aside>
+
+<aside>
+<img src="images.png" alt="images.png" width="40px" /> Network Router
+
+---
+
+*Expert*
+
+</aside>
+
+<aside>
+<img src="png-transparent-linux-distribution-tux-free-software-linux-kernel-linux-logo-bird-linux-thumbnail.png" alt="png-transparent-linux-distribution-tux-free-software-linux-kernel-linux-logo-bird-linux-thumbnail.png" width="40px" /> Linux system
+
+---
+
+*Expert*
+
+</aside>
+
+## Languages
+
+---
+
+<aside>
+<img src="united-kingdom.png" alt="united-kingdom.png" width="40px" /> **English**
+
+---
+
+Good
+
+</aside>
+
+<aside>
+<img src="images_(1).png" alt="images_(1).png" width="40px" /> Chinese
+
+---
+
+Miduim
+
+</aside>
+
+## Awards & Certifications
+
+---
+
+<aside>
+<img src="https://www.notion.so/icons/checkmark_gray.svg" alt="https://www.notion.so/icons/checkmark_gray.svg" width="40px" />  Cisco Certified Support Technician (CCST) Certification!
+
+*July 2023*
+
+---
+
+[](https://www.notion.so)
+
+[]()
+
+</aside>
+
+## Skills
+
+---
+
+<aside>
+<img src="https://www.notion.so/icons/star_gray.svg" alt="https://www.notion.so/icons/star_gray.svg" width="40px" /> Copywriting
+
+</aside>
+
+<aside>
+<img src="https://www.notion.so/icons/star_gray.svg" alt="https://www.notion.so/icons/star_gray.svg" width="40px" /> Python
+
+</aside>
+
+<aside>
+<img src="https://www.notion.so/icons/star_gray.svg" alt="https://www.notion.so/icons/star_gray.svg" width="40px" /> Linux System
+
+</aside>
+
+<aside>
+<img src="https://www.notion.so/icons/star_gray.svg" alt="https://www.notion.so/icons/star_gray.svg" width="40px" /> Research
+
+</aside>
+
+<aside>
+<img src="https://www.notion.so/icons/star_gray.svg" alt="https://www.notion.so/icons/star_gray.svg" width="40px" /> Network
+
+</aside>
+
+<aside>
+<img src="https://www.notion.so/icons/star_gray.svg" alt="https://www.notion.so/icons/star_gray.svg" width="40px" /> Data Analysis
+
+</aside>
+
+## References
+
+---
+
+<aside>
+<img src="https://www.notion.so/icons/user-circle_gray.svg" alt="https://www.notion.so/icons/user-circle_gray.svg" width="40px" /> **Mr. Ros Ratanak**
+
+---
+
+<aside>
+<img src="https://www.notion.so/icons/phone-call_gray.svg" alt="https://www.notion.so/icons/phone-call_gray.svg" width="40px" /> (**855**)  **86 673 373**
+
+</aside>
+
+<aside>
+<img src="https://www.notion.so/icons/mail_gray.svg" alt="https://www.notion.so/icons/mail_gray.svg" width="40px" /> **Position:Asist Manager**
+
+</aside>
+
+</aside>
+
+<aside>
+<img src="https://www.notion.so/icons/user-circle_gray.svg" alt="https://www.notion.so/icons/user-circle_gray.svg" width="40px" /> Ken Chandara
+
+---
+
+<aside>
+<img src="https://www.notion.so/icons/phone-call_gray.svg" alt="https://www.notion.so/icons/phone-call_gray.svg" width="40px" /> (**855**)  **96 387 8643**
+
+</aside>
+
+<aside>
+<img src="https://www.notion.so/icons/mail_gray.svg" alt="https://www.notion.so/icons/mail_gray.svg" width="40px" /> **Position:IT Supervisor**
+
+</aside>
+
+</aside>
