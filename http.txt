@@ -1,0 +1,68 @@
+#!/bin/bash
+# Homepage: https://github.com/BRAVO-IT/VPN
+# Author: BRAVO_IT
+
+function get_external_address() {
+    local addr=$( timeout 3 curl -s http://ipecho.net/plain || \
+                  timeout 3 curl -s http://ident.me/ || \
+                  timeout 3 curl -s http://whatismyip.akamai.com/ )
+    [ $? -ne 0 ] && addr="<this server IP address>"
+    echo "$addr"
+}
+
+# Default proxy credentials (change as needed)
+USER="proxyuser"
+PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
+
+# Install Squid
+function install_squid() {
+    apt update
+    apt install -y squid apache2-utils
+}
+
+# Generate password file for authentication
+function generate_authentication() {
+    touch /etc/squid/passwords
+    htpasswd -b -c /etc/squid/passwords "$USER" "$PASSWORD"
+}
+
+# Generate Squid config file with authentication
+function generate_squid_config() {
+    cat > /etc/squid/squid.conf <<EOF
+http_port 3128
+acl localnet src 0.0.0.0/0
+auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/passwords
+auth_param basic realm Proxy
+acl authenticated proxy_auth REQUIRED
+http_access allow authenticated
+EOF
+}
+
+# Open firewall ports
+function open_firewall_ports() {
+    if which ufw > /dev/null; then
+        ufw allow 3128/tcp
+    fi
+    if which firewall-cmd > /dev/null; then
+        firewall-cmd --zone=public --permanent --add-port=3128/tcp
+        firewall-cmd --reload
+    fi
+}
+
+# Restart Squid service
+function restart_squid() {
+    systemctl restart squid
+}
+
+install_squid
+generate_authentication
+generate_squid_config
+open_firewall_ports
+restart_squid
+
+echo "Your HTTP/HTTPS Proxy Configuration:"
+echo "Protocol: HTTP & HTTPS"
+echo "Address : $(get_external_address)"
+echo "Port    : 3128"
+echo "User    : $USER"
+echo "Pass    : $PASSWORD"
