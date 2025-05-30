@@ -10,14 +10,30 @@ function get_external_address() {
     echo "$addr"
 }
 
-# Default proxy credentials (change as needed)
+# Default proxy credentials
 USER="proxyuser"
 PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
 
+# Detect OS
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS=$ID
+else
+    echo "Unsupported OS"
+    exit 1
+fi
+
 # Install Squid
 function install_squid() {
-    apt update
-    apt install -y squid apache2-utils
+    if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
+        apt update
+        apt install -y squid apache2-utils
+    elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
+        yum install -y squid httpd-tools
+    else
+        echo "Unsupported OS"
+        exit 1
+    fi
 }
 
 # Generate password file for authentication
@@ -28,10 +44,16 @@ function generate_authentication() {
 
 # Generate Squid config file with authentication
 function generate_squid_config() {
+    if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
+        AUTH_PATH="/usr/lib/squid/basic_ncsa_auth"
+    elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
+        AUTH_PATH="/usr/lib64/squid/basic_ncsa_auth"
+    fi
+
     cat > /etc/squid/squid.conf <<EOF
 http_port 3128
 acl localnet src 0.0.0.0/0
-auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/passwords
+auth_param basic program $AUTH_PATH /etc/squid/passwords
 auth_param basic realm Proxy
 acl authenticated proxy_auth REQUIRED
 http_access allow authenticated
@@ -40,10 +62,10 @@ EOF
 
 # Open firewall ports
 function open_firewall_ports() {
-    if which ufw > /dev/null; then
+    if command -v ufw > /dev/null; then
         ufw allow 3128/tcp
     fi
-    if which firewall-cmd > /dev/null; then
+    if command -v firewall-cmd > /dev/null; then
         firewall-cmd --zone=public --permanent --add-port=3128/tcp
         firewall-cmd --reload
     fi
@@ -52,6 +74,7 @@ function open_firewall_ports() {
 # Restart Squid service
 function restart_squid() {
     systemctl restart squid
+    systemctl enable squid
 }
 
 install_squid
