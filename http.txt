@@ -26,8 +26,7 @@ fi
 # Install Squid
 function install_squid() {
     if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
-        apt update
-        apt install -y squid apache2-utils
+        apt update && apt install -y squid apache2-utils
     elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
         yum install -y squid httpd-tools
     else
@@ -60,6 +59,30 @@ http_access allow authenticated
 EOF
 }
 
+# Create Squid Service File (For CentOS/Fedora if missing)
+function create_squid_service() {
+    if [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
+        if [[ ! -f /etc/systemd/system/squid.service ]]; then
+            cat > /etc/systemd/system/squid.service <<EOF
+[Unit]
+Description=Squid Web Proxy
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/sbin/squid -s
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+            systemctl daemon-reload
+        fi
+    fi
+}
+
 # Open firewall ports
 function open_firewall_ports() {
     if command -v ufw > /dev/null; then
@@ -73,13 +96,14 @@ function open_firewall_ports() {
 
 # Restart Squid service
 function restart_squid() {
-    systemctl restart squid
     systemctl enable squid
+    systemctl restart squid
 }
 
 install_squid
 generate_authentication
 generate_squid_config
+create_squid_service
 open_firewall_ports
 restart_squid
 
