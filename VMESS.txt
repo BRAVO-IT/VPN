@@ -1,0 +1,36 @@
+#!/bin/bash
+# Install V2Ray
+curl -fsSL https://install.direct/go.sh | bash
+
+# Generate VMESS Configuration
+UUID=$(uuidgen)
+cat > /etc/v2ray/config.json <<EOF
+{
+  "inbounds": [{
+    "port": 1080,
+    "protocol": "vmess",
+    "settings": {
+      "clients": [{
+        "id": "$UUID",
+        "alterId": 64
+      }]
+    }
+  }],
+  "outbounds": [{
+    "protocol": "freedom",
+    "settings": {}
+  }]
+}
+EOF
+
+# Start V2Ray
+systemctl enable v2ray
+systemctl restart v2ray
+
+# Print Node Information
+echo "Your VMESS Proxy Configuration:"
+echo "Protocol : VMESS"
+echo "Address  : $(hostname -I | awk '{print $1}')"
+echo "Port     : 1080"
+echo "UUID     : $UUID"
+echo "AlterId  : 64"
