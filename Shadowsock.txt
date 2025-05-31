@@ -1,0 +1,83 @@
+#!/bin/bash
+# Homepage: https://github.com/BRAVO-IT/VPN
+# Author: BRAVO_IT
+
+function get_external_address() {
+    local addr=$( timeout 3 curl -s http://ipecho.net/plain || \
+                  timeout 3 curl -s http://ident.me/ || \
+                  timeout 3 curl -s http://whatismyip.akamai.com/ )
+    [ $? -ne 0 ] && addr="<this server IP address>"
+    echo "$addr"
+}
+
+# Default proxy credentials
+PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
+
+# Detect OS
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS=$ID
+else
+    echo "Unsupported OS"
+    exit 1
+fi
+
+# Install Shadowsocks
+function install_shadowsocks() {
+    if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
+        apt update && apt install -y shadowsocks-libev
+    elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
+        yum install -y shadowsocks-libev
+    else
+        echo "Unsupported OS"
+        exit 1
+    fi
+}
+
+# Generate Shadowsocks Configuration
+function generate_shadowsocks_config() {
+    cat > /etc/shadowsocks-libev/config.json <<EOF
+{
+  "server": "0.0.0.0",
+  "server_port": 8388,
+  "password": "$PASSWORD",
+  "method": "aes-256-gcm"
+}
+EOF
+}
+
+# Open firewall ports
+function open_firewall_ports() {
+    if command -v ufw > /dev/null; then
+        ufw allow 8388/tcp
+    fi
+    if command -v firewall-cmd > /dev/null; then
+        firewall-cmd --zone=public --permanent --add-port=8388/tcp
+        firewall-cmd --reload
+    fi
+}
+
+# Enable TCP Fast Open for faster connections
+function optimize_network() {
+    sysctl -w net.ipv4.tcp_fastopen=3
+}
+
+# Restart Shadowsocks service
+function restart_shadowsocks() {
+    systemctl enable shadowsocks-libev
+    systemctl restart shadowsocks-libev
+}
+
+install_shadowsocks
+generate_shadowsocks_config
+open_firewall_ports
+optimize_network
+restart_shadowsocks
+
+# Print Node Information
+echo "Your Shadowsocks Proxy Configuration:"
+echo "Protocol  : Shadowsocks"
+echo "Address   : $(get_external_address)"
+echo "Port      : 8388"
+echo "Password  : $PASSWORD"
+echo "Encryption: AES-256-GCM"
