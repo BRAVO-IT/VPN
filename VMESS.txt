@@ -1,10 +1,10 @@
 #!/bin/bash
-# Install V2Ray
-curl -fsSL https://install.direct/go.sh | bash
+# Install V2Ray using official fhs-install-v2ray method
+bash <(curl -Ls https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install.sh)
 
 # Generate VMESS Configuration
 UUID=$(uuidgen)
-cat > /etc/v2ray/config.json <<EOF
+cat > /usr/local/etc/v2ray/config.json <<EOF
 {
   "inbounds": [{
     "port": 1080,
@@ -23,7 +23,7 @@ cat > /etc/v2ray/config.json <<EOF
 }
 EOF
 
-# Start V2Ray
+# Restart V2Ray service
 systemctl enable v2ray
 systemctl restart v2ray
 
