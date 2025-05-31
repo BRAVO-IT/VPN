@@ -22,11 +22,12 @@ else
     exit 1
 fi
 
-# Install Shadowsocks
+# Install Shadowsocks (for CentOS, manually install epel-release first)
 function install_shadowsocks() {
     if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
         apt update && apt install -y shadowsocks-libev
     elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
+        yum install -y epel-release
         yum install -y shadowsocks-libev
     else
         echo "Unsupported OS"
