@@ -109,7 +109,7 @@ optimize_network
 restart_shadowsocks
 
 # Verify installation
-rpm -q shadowsocks-libev
+rpm -q shadowsocks-libev || echo "Shadowsocks installation failed!"
 
 # Print Node Information
 echo "Your Shadowsocks Proxy Configuration:"
