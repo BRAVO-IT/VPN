@@ -13,108 +13,42 @@ function get_external_address() {
 # Default proxy credentials
 PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
 
-# Detect OS
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    OS=$ID
-else
-    echo "Unsupported OS"
-    exit 1
-fi
-
-# Install Shadowsocks (CentOS requires manual compilation)
-function install_shadowsocks() {
-    if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
-        apt update && apt install -y shadowsocks-libev
-    elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
-        yum install -y epel-release
-        yum update -y
-        yum install -y wget git gcc autoconf automake libtool make zlib-devel openssl-devel pcre-devel c-ares-devel asciidoc xmlto libev-devel
-        
-        # Fixing `asciidoc` missing issue
-        yum install -y asciidoc xmlto libev-devel
-        
-        # Proper Shadowsocks installation
-        rm -rf shadowsocks-libev
-        git clone https://github.com/shadowsocks/shadowsocks-libev.git
-        cd shadowsocks-libev
-        git submodule update --init --recursive
-        ./autogen.sh
-        ./configure && make && make install
-        cd ..
-    else
-        echo "Unsupported OS"
-        exit 1
-    fi
+# Install Docker
+function install_docker() {
+    echo "Installing Docker..."
+    curl -fsSL https://get.docker.com | bash
+    systemctl enable docker
+    systemctl start docker
 }
 
-# Create Shadowsocks Config Directory
-mkdir -p /etc/shadowsocks-libev
-
-# Generate Shadowsocks Configuration
-function generate_shadowsocks_config() {
-    cat > /etc/shadowsocks-libev/config.json <<EOF
-{
-  "server": "0.0.0.0",
-  "server_port": 8388,
-  "password": "$PASSWORD",
-  "method": "aes-256-gcm",
-  "fast_open": true,
-  "mode": "tcp_and_udp"
-}
-EOF
+# Pull Shadowsocks Docker Image
+function pull_shadowsocks_image() {
+    echo "Pulling Shadowsocks Docker image..."
+    docker pull teddysun/shadowsocks-libev
 }
 
-# Create Shadowsocks Systemd Service File
-function create_shadowsocks_service() {
-    cat > /etc/systemd/system/shadowsocks-libev.service <<EOF
-[Unit]
-Description=Shadowsocks-libev Server
-After=network.target
-
-[Service]
-ExecStart=/usr/local/bin/ss-server -c /etc/shadowsocks-libev/config.json
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-EOF
+# Run Shadowsocks Container
+function run_shadowsocks() {
+    echo "Starting Shadowsocks server..."
+    docker run -d --name ss-server \
+      -p 8388:8388/tcp \
+      -p 8388:8388/udp \
+      teddysun/shadowsocks-libev \
+      -s 0.0.0.0 -p 8388 -k "$PASSWORD" -m aes-256-gcm
 }
 
-# Open firewall ports
-function open_firewall_ports() {
-    if command -v ufw > /dev/null; then
-        ufw allow 8388/tcp
-        ufw allow 8388/udp
-    fi
-    if command -v firewall-cmd > /dev/null; then
-        firewall-cmd --zone=public --permanent --add-port=8388/tcp
-        firewall-cmd --zone=public --permanent --add-port=8388/udp
-        firewall-cmd --reload
-    fi
+# Check if Shadowsocks is running
+function verify_shadowsocks() {
+    echo "Verifying Shadowsocks service..."
+    docker ps
+    docker logs ss-server
+    netstat -tulnp | grep 8388
 }
 
-# Enable TCP Fast Open for faster connections
-function optimize_network() {
-    sysctl -w net.ipv4.tcp_fastopen=3
-}
-
-# Restart Shadowsocks service
-function restart_shadowsocks() {
-    systemctl daemon-reload
-    systemctl enable shadowsocks-libev
-    systemctl restart shadowsocks-libev
-}
-
-install_shadowsocks
-generate_shadowsocks_config
-create_shadowsocks_service
-open_firewall_ports
-optimize_network
-restart_shadowsocks
-
-# Verify installation
-rpm -q shadowsocks-libev || echo "Shadowsocks installation failed!"
+install_docker
+pull_shadowsocks_image
+run_shadowsocks
+verify_shadowsocks
 
 # Print Node Information
 echo "Your Shadowsocks Proxy Configuration:"
