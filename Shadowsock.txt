@@ -28,7 +28,14 @@ function install_shadowsocks() {
         apt update && apt install -y shadowsocks-libev
     elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
         yum install -y epel-release
-        yum install -y shadowsocks-libev
+        yum update -y
+        yum install -y wget git gcc autoconf automake libtool make zlib-devel openssl-devel pcre-devel c-ares-devel
+        git clone https://github.com/shadowsocks/shadowsocks-libev.git
+        cd shadowsocks-libev
+        git submodule update --init --recursive
+        ./autogen.sh
+        ./configure && make && make install
+        cd ..
     else
         echo "Unsupported OS"
         exit 1
@@ -52,6 +59,22 @@ function generate_shadowsocks_config() {
 EOF
 }
 
+# Create Shadowsocks Systemd Service File
+function create_shadowsocks_service() {
+    cat > /etc/systemd/system/shadowsocks-libev.service <<EOF
+[Unit]
+Description=Shadowsocks-libev Server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/ss-server -c /etc/shadowsocks-libev/config.json
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
 # Open firewall ports
 function open_firewall_ports() {
     if command -v ufw > /dev/null; then
@@ -72,12 +95,14 @@ function optimize_network() {
 
 # Restart Shadowsocks service
 function restart_shadowsocks() {
+    systemctl daemon-reload
     systemctl enable shadowsocks-libev
     systemctl restart shadowsocks-libev
 }
 
 install_shadowsocks
 generate_shadowsocks_config
+create_shadowsocks_service
 open_firewall_ports
 optimize_network
 restart_shadowsocks
