@@ -61,6 +61,9 @@ http_access allow authenticated
 server_persistent_connections on
 cache_mem 256 MB
 dns_timeout 10 seconds
+
+# Allow larger cached objects
+maximum_object_size 512 MB
 EOF
 }
 
