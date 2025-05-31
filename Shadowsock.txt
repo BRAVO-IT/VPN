@@ -22,7 +22,7 @@ else
     exit 1
 fi
 
-# Install Shadowsocks (for CentOS, manually install epel-release first)
+# Install Shadowsocks (CentOS requires EPEL first)
 function install_shadowsocks() {
     if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
         apt update && apt install -y shadowsocks-libev
@@ -81,6 +81,9 @@ generate_shadowsocks_config
 open_firewall_ports
 optimize_network
 restart_shadowsocks
+
+# Verify installation
+rpm -q shadowsocks-libev
 
 # Print Node Information
 echo "Your Shadowsocks Proxy Configuration:"
