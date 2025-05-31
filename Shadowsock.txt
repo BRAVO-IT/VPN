@@ -22,14 +22,15 @@ else
     exit 1
 fi
 
-# Install Shadowsocks (CentOS requires EPEL first)
+# Install Shadowsocks (CentOS requires manual compilation)
 function install_shadowsocks() {
     if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
         apt update && apt install -y shadowsocks-libev
     elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
         yum install -y epel-release
         yum update -y
-        yum install -y wget git gcc autoconf automake libtool make zlib-devel openssl-devel pcre-devel c-ares-devel
+        yum install -y wget git gcc autoconf automake libtool make zlib-devel openssl-devel pcre-devel c-ares-devel asciidoc xmlto libev-devel
+        
         git clone https://github.com/shadowsocks/shadowsocks-libev.git
         cd shadowsocks-libev
         git submodule update --init --recursive
