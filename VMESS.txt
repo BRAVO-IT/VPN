@@ -3,8 +3,8 @@
 bash <(curl -Ls https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install.sh)
 
 # Generate VMESS Configuration
-UUID=$(uuidgen)
-cat > /usr/local/etc/v2ray/config.json <<EOF
+UUID=$(cat /proc/sys/kernel/random/uuid)
+cat > /etc/v2ray/config.json <<EOF
 {
   "inbounds": [{
     "port": 1080,
@@ -23,6 +23,10 @@ cat > /usr/local/etc/v2ray/config.json <<EOF
 }
 EOF
 
+# Ensure V2Ray service is recognized
+sudo cp /usr/local/lib/systemd/system/v2ray.service /etc/systemd/system/
+sudo systemctl daemon-reload
+
 # Restart V2Ray service
 systemctl enable v2ray
 systemctl restart v2ray
@@ -34,3 +38,6 @@ echo "Address  : $(hostname -I | awk '{print $1}')"
 echo "Port     : 1080"
 echo "UUID     : $UUID"
 echo "AlterId  : 64"
+
+# Verify V2Ray is Running
+systemctl status v2ray
