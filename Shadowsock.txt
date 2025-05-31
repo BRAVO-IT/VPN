@@ -35,6 +35,9 @@ function install_shadowsocks() {
     fi
 }
 
+# Create Shadowsocks Config Directory
+mkdir -p /etc/shadowsocks-libev
+
 # Generate Shadowsocks Configuration
 function generate_shadowsocks_config() {
     cat > /etc/shadowsocks-libev/config.json <<EOF
@@ -42,7 +45,9 @@ function generate_shadowsocks_config() {
   "server": "0.0.0.0",
   "server_port": 8388,
   "password": "$PASSWORD",
-  "method": "aes-256-gcm"
+  "method": "aes-256-gcm",
+  "fast_open": true,
+  "mode": "tcp_and_udp"
 }
 EOF
 }
@@ -51,9 +56,11 @@ EOF
 function open_firewall_ports() {
     if command -v ufw > /dev/null; then
         ufw allow 8388/tcp
+        ufw allow 8388/udp
     fi
     if command -v firewall-cmd > /dev/null; then
         firewall-cmd --zone=public --permanent --add-port=8388/tcp
+        firewall-cmd --zone=public --permanent --add-port=8388/udp
         firewall-cmd --reload
     fi
 }
