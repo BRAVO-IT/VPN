@@ -1,0 +1,140 @@
+#!/bin/bash
+# Homepage: https://github.com/BRAVO-IT/VPN
+# Author: BRAVO_IT
+
+function get_external_address() {
+    local addr=$( timeout 3 curl -s http://ipecho.net/plain || \
+                  timeout 3 curl -s http://ident.me/ || \
+                  timeout 3 curl -s http://whatismyip.akamai.com/ )
+    [ $? -ne 0 ] && addr="<this server IP address>"
+    echo "$addr"
+}
+
+# Default proxy credentials
+USER="proxyuser"
+PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
+
+# Detect OS
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS=$ID
+else
+    echo "Unsupported OS"
+    exit 1
+fi
+
+# Install Squid
+function install_squid() {
+    if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
+        apt update && apt install -y squid apache2-utils openssl
+    elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
+        yum install -y squid httpd-tools openssl
+    else
+        echo "Unsupported OS"
+        exit 1
+    fi
+}
+
+# Generate SSL certificates for Squid
+function generate_ssl_certificates() {
+    mkdir -p /etc/squid/ssl_cert
+    openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+        -keyout /etc/squid/ssl_cert/squid.key \
+        -out /etc/squid/ssl_cert/squid.crt \
+        -subj "/C=US/ST=California/L=San Francisco/O=BravoVPN/OU=Proxy/CN=$(get_external_address)"
+    chmod 400 /etc/squid/ssl_cert/squid.key
+}
+
+# Generate password file for authentication
+function generate_authentication() {
+    touch /etc/squid/passwords
+    htpasswd -b -c /etc/squid/passwords "$USER" "$PASSWORD"
+}
+
+# Generate Squid config file with SSL support
+function generate_squid_config() {
+    if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
+        AUTH_PATH="/usr/lib/squid/basic_ncsa_auth"
+    elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
+        AUTH_PATH="/usr/lib64/squid/basic_ncsa_auth"
+    fi
+
+    cat > /etc/squid/squid.conf <<EOF
+https_port 3128 cert=/etc/squid/ssl_cert/squid.crt key=/etc/squid/ssl_cert/squid.key
+acl localnet src 0.0.0.0/0
+auth_param basic program $AUTH_PATH /etc/squid/passwords
+auth_param basic realm Secure Proxy
+acl authenticated proxy_auth REQUIRED
+http_access allow authenticated
+
+# Performance optimizations
+server_persistent_connections on
+cache_mem 256 MB
+dns_timeout 10 seconds
+
+# Allow larger cached objects
+maximum_object_size 512 MB
+EOF
+}
+
+# Create Squid Service File (For CentOS/Fedora if missing)
+function create_squid_service() {
+    if [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
+        if [[ ! -f /etc/systemd/system/squid.service ]]; then
+            cat > /etc/systemd/system/squid.service <<EOF
+[Unit]
+Description=Squid Web Proxy
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/sbin/squid -s
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+            systemctl daemon-reload
+        fi
+    fi
+}
+
+# Open firewall ports
+function open_firewall_ports() {
+    if command -v ufw > /dev/null; then
+        ufw allow 3128/tcp
+    fi
+    if command -v firewall-cmd > /dev/null; then
+        firewall-cmd --zone=public --permanent --add-port=3128/tcp
+        firewall-cmd --reload
+    fi
+}
+
+# Enable TCP Fast Open for faster connections
+function optimize_network() {
+    sysctl -w net.ipv4.tcp_fastopen=3
+}
+
+# Restart Squid service
+function restart_squid() {
+    systemctl enable squid
+    systemctl restart squid
+}
+
+install_squid
+generate_ssl_certificates
+generate_authentication
+generate_squid_config
+create_squid_service
+open_firewall_ports
+optimize_network
+restart_squid
+
+echo "Your SSL Proxy Configuration:"
+echo "Protocol: HTTPS (SSL)"
+echo "Address : $(get_external_address)"
+echo "Port    : 3128"
+echo "User    : $USER"
+echo "Pass    : $PASSWORD"
