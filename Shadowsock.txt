@@ -31,6 +31,11 @@ function install_shadowsocks() {
         yum update -y
         yum install -y wget git gcc autoconf automake libtool make zlib-devel openssl-devel pcre-devel c-ares-devel asciidoc xmlto libev-devel
         
+        # Fixing `asciidoc` missing issue
+        yum install -y asciidoc xmlto libev-devel
+        
+        # Proper Shadowsocks installation
+        rm -rf shadowsocks-libev
         git clone https://github.com/shadowsocks/shadowsocks-libev.git
         cd shadowsocks-libev
         git submodule update --init --recursive
