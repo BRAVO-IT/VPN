@@ -1,0 +1,113 @@
+#!/bin/bash
+# Homepage: https://github.com/BRAVO-IT/VPN
+# Author: BRAVO_IT
+# Contributors: Vlad Safronov (Oracle Linux 7.5, CentOS 7), Updated for Ubuntu 22.04 by Copilot
+
+function get_external_address() {
+    local addr=$( timeout 3 dig +short myip.opendns.com @resolver1.opendns.com || \
+    timeout 3 curl -s http://ipecho.net/plain || \
+    timeout 3 curl -s http://ident.me/ || \
+    timeout 3 curl -s http://whatismyip.akamai.com/ )
+    [ $? -ne 0 ] && addr="<this server IP address>"
+    echo "$addr"
+}
+
+# args: file user password
+function generate_password_file() {
+    echo "$2:$( openssl passwd -1 "$3" )" > "$1"
+}
+
+# args: file pwdfile
+function generate_pam() {
+cat > "$1" << EOF
+auth required pam_pwdfile.so nodelay pwdfile=$2
+account required pam_permit.so
+EOF
+}
+
+# args: file interface port
+function generate_config_v14() {
+cat > "$1" <<EOF
+internal.protocol: ipv4 ipv6
+internal: $2 port=$3
+external.protocol: ipv4 ipv6
+external: $2
+
+socksmethod: pam.any
+
+user.privileged: root
+user.notprivileged: nobody
+
+client pass {
+        from: 0.0.0.0/0 to: 0.0.0.0/0
+        log: error
+}
+
+client pass {
+        from: ::/0 to: ::/0
+        log: error
+}
+
+socks block {
+    from: 0.0.0.0/0 to: 127.0.0.0/8
+    log: error
+}
+
+socks block {
+    from: ::/0 to: ::1/128
+    log: error
+}
+
+socks pass {
+        from: 0.0.0.0/0 to: 0.0.0.0/0
+        log: error
+}
+EOF
+}
+
+# args: port
+function open_firewalld_port() {
+    if which firewall-cmd > /dev/null; then
+        firewall-cmd --zone=public --permanent --add-port="$1"/tcp
+        firewall-cmd --reload
+    fi
+}
+
+IFACE=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f5)
+
+[ -z "$USER" ] && export USER=user
+[ -z "$PORT" ] && export PORT=8080
+[ -z "$PASSWORD" ] && export PASSWORD=$( cat /dev/urandom | tr --delete --complement 'a-z0-9' | head --bytes=10 )
+
+[ -e /etc/lsb-release ] && source /etc/lsb-release
+[ -e /etc/os-release ] && source /etc/os-release
+
+# Ubuntu 22.04 Jammy
+if [ "$ID $VERSION_CODENAME" = "ubuntu jammy" ]; then
+
+    apt update
+    apt install -y dante-server libpam-pwdfile openssl firewalld
+    systemctl enable --now firewalld
+
+    generate_password_file /etc/danted.passwd "$USER" "$PASSWORD"
+    generate_pam /etc/pam.d/sockd /etc/danted.passwd
+    generate_config_v14 /etc/danted.conf "$IFACE" "$PORT"
+    open_firewalld_port "$PORT"
+
+    systemctl restart danted.service
+
+    echo "Your socks proxy configuration:"
+    printf "Protocol : SOCKS5\n"
+    printf "Address  : $(get_external_address)\n"
+    printf "Port         : $PORT\n"
+    printf "User         : $USER\n"
+    printf "Pass         : $PASSWORD\n"
+    echo "Any questions? Contact Telegram @BRAVO_IT"
+
+else
+    echo "Sorry, this distribution is not supported."
+    echo "Supported distributions:"
+    echo "- Ubuntu 22.04 Jammy"
+    echo "Any questions? Contact Telegram @BRAVO_IT"
+    exit 1
+fi
