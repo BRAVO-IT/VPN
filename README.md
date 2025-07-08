@@ -12,76 +12,10 @@
 
 ---
 
-## 👤 Profile
-Dear Hiring Manager,
+## 👤 About Me
+- **Website:** [@ME](https://bravonet.services)  
 
-I am writing to express my interest in the Network Engineer position at [Company Name]. With a Bachelor’s degree in Computer Science and over five years of hands-on experience in designing, implementing, and maintaining network infrastructures, I am confident in my ability to contribute effectively to your team and help drive the success of your network operations.
 
----
-
-## 🎓 Education
-### Build Bright University (Cambodia)  
-*Fall 2017 - Spring 2021*  
-- Computer Science and Network Engineering
-
----
-
-## 💼 Employment
-### **White Sand Palace** — IT Operations  
-*July 2021 - 2023*  
-- Troubleshooting and resolving network issues  
-- Monitoring and optimizing network performance  
-- Configured TP-Link routers, network cabling, and CCTV systems  
-- Supported casino and online group networks  
-- Hardware/software maintenance and troubleshooting  
-
-**Technologies Used:**  
-Fortigate, Mikrotik, Cisco Switch, ASA Firewall, Huawei, Linux  
-
----
-
-### **China Town** — IT Supervisor  
-*July 2019 - Present*  
-- Implemented AWS/Tencent Cloud solutions (SRS RTMP, OpenVPN servers)  
-- Configured Mikrotik (IPsec, load balancing, OSPF) and Cisco/Huawei switches  
-- Managed 2 ISP failover and traffic routing  
-- Server administration (Ubuntu/CentOS)  
-
-**Key Projects:**  
-- Cloud infrastructure deployment  
-- Multi-ISP network redundancy  
-
----
-
-## 🛠 Skills
-### Programming  
-- **Python** (Intermediate)  
-- HTML/CSS, C#, C++  
-
-### Network Engineering  
-- **Expert:** Router Configuration (Cisco, Mikrotik, Huawei)  
-- **Expert:** Linux System Administration  
-- Firewall Management (Fortigate, ASA)  
-
-### Languages  
-- 🇬🇧 English (Proficient)  
-- 🇨🇳 Chinese (Intermediate)  
-
----
-
-## 📜 Certifications
-- **Cisco Certified Support Technician (CCST)**  
-*July 2023*
-
----
-
-## 🏆 Core Competencies
-- Network Design & Optimization  
-- Cloud Infrastructure (AWS/Tencent)  
-- Troubleshooting & Technical Support  
-- Cross-functional Collaboration  
-
----
 
 ## 📞 References
 ### Mr. Ros Ratanak  
