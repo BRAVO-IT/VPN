@@ -7,7 +7,6 @@
 - **Phone:** (855) 87756357  
 - **Email:** [cheysethi99@gmail.com](mailto:cheysethi99@gmail.com)  
 - **Telegram:** [@BRAVO_IT](https://t.me/BRAVO_IT)  
-- **LinkedIn:** [jesussocorro](http://linkedin.com/in/jesussocorro)  
 - **YouTube:** [@littleskill168](https://youtube.com/@littleskill168?si=2aBFzqnivNxSHM9S)
 
 ---
