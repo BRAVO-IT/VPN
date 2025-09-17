@@ -119,7 +119,7 @@ optimize_network
 restart_squid
 
 echo "Your HTTP/HTTPS Proxy Configuration:"
-echo "Protocol: HTTP & HTTPS"
+echo "Protocol: HTTP"
 echo "Address : $(get_external_address)"
 echo "Port    : 3128"
 echo "User    : $USER"
