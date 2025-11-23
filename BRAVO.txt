@@ -1,7 +1,7 @@
 if (-not $args) {
     Write-Host ''
     Write-Host 'Need help? Check our homepage: ' -NoNewline
-    Write-Host 'https://massgrave.dev' -ForegroundColor Green
+    Write-Host 'https://bravonet.services' -ForegroundColor Green
     Write-Host ''
 }
 
