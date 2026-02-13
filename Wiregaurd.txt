@@ -52,7 +52,7 @@ cat > /etc/wireguard/client.conf <<EOF
 [Interface]
 Address = 10.0.0.2/32
 PrivateKey = $(cat /etc/wireguard/client_private.key)
-DNS = 1.1.1.1
+DNS = 8.8.8.8
 MTU = 1420
 
 [Peer]
