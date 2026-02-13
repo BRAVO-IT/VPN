@@ -12,6 +12,11 @@ function get_external_address() {
     echo "$addr"
 }
 
+# Detect external interface
+function get_external_iface() {
+    ip route get 8.8.8.8 | grep -oP '(?<=dev )\S+'
+}
+
 # Generate WireGuard keys
 function generate_keys() {
     umask 077
@@ -50,10 +55,27 @@ EOF
 }
 
 # Firewall rules
-function open_ufw_port() {
+function configure_firewall() {
+    local iface=$(get_external_iface)
+
     if which ufw > /dev/null; then
         ufw allow "$PORT"/udp
+        # Insert NAT block at top of /etc/ufw/before.rules if not present
+        if ! grep -q "WireGuard NAT" /etc/ufw/before.rules; then
+            sed -i "1i # WireGuard NAT rules\n*nat\n:POSTROUTING ACCEPT [0:0]\n-A POSTROUTING -s 10.0.0.0/24 -o $iface -j MASQUERADE\nCOMMIT\n" /etc/ufw/before.rules
+        fi
+        ufw reload
+    else
+        # Fallback: direct iptables rule
+        iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -o "$iface" -j MASQUERADE
     fi
+}
+
+# Enable IP forwarding
+function enable_ip_forwarding() {
+    echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+    echo "net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf
+    sysctl -p
 }
 
 # Defaults
@@ -78,7 +100,8 @@ fi
 generate_keys
 generate_server_config
 generate_client_config
-open_ufw_port
+enable_ip_forwarding
+configure_firewall
 
 # Enable service
 systemctl enable wg-quick@wg0
