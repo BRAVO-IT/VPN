@@ -1,0 +1,89 @@
+#!/bin/bash
+# Homepage: https://github.com/BRAVO-IT/WireGuard
+# Author: BRAVO_IT
+
+# Detect external IP
+function get_external_address() {
+    local addr=$(timeout 3 dig +short myip.opendns.com @resolver1.opendns.com || \
+    timeout 3 curl -s http://ipecho.net/plain || \
+    timeout 3 curl -s http://ident.me/ || \
+    timeout 3 curl -s http://whatismyip.akamai.com/)
+    [ $? -ne 0 ] && addr="<this server IP address>"
+    echo "$addr"
+}
+
+# Generate WireGuard keys
+function generate_keys() {
+    umask 077
+    wg genkey | tee /etc/wireguard/server_private.key | wg pubkey > /etc/wireguard/server_public.key
+    wg genkey | tee /etc/wireguard/client_private.key | wg pubkey > /etc/wireguard/client_public.key
+}
+
+# Generate server config
+function generate_server_config() {
+cat > /etc/wireguard/wg0.conf <<EOF
+[Interface]
+Address = 10.0.0.1/24
+ListenPort = $PORT
+PrivateKey = $(cat /etc/wireguard/server_private.key)
+
+# Client peer
+[Peer]
+PublicKey = $(cat /etc/wireguard/client_public.key)
+AllowedIPs = 10.0.0.2/32
+EOF
+}
+
+# Generate client config
+function generate_client_config() {
+cat > /etc/wireguard/client.conf <<EOF
+[Interface]
+Address = 10.0.0.2/24
+PrivateKey = $(cat /etc/wireguard/client_private.key)
+DNS = 1.1.1.1
+
+[Peer]
+PublicKey = $(cat /etc/wireguard/server_public.key)
+Endpoint = $(get_external_address):$PORT
+AllowedIPs = 0.0.0.0/0, ::/0
+EOF
+}
+
+# Firewall rules
+function open_ufw_port() {
+    if which ufw > /dev/null; then
+        ufw allow "$PORT"/udp
+    fi
+}
+
+# Defaults
+[ -z "$PORT" ] && export PORT=51820
+
+# Install WireGuard
+if [ -e /etc/os-release ]; then
+    source /etc/os-release
+    if [[ "$ID" == "ubuntu" || "$ID" == "debian" ]]; then
+        apt update
+        apt install -y wireguard
+    elif [[ "$ID" == "centos" || "$ID" == "rocky" || "$ID" == "almalinux" ]]; then
+        yum install -y epel-release
+        yum install -y wireguard-tools
+    else
+        echo "Unsupported distribution"
+        exit 1
+    fi
+fi
+
+# Generate configs
+generate_keys
+generate_server_config
+generate_client_config
+open_ufw_port
+
+# Enable service
+systemctl enable wg-quick@wg0
+systemctl start wg-quick@wg0
+
+echo "WireGuard VPN setup complete!"
+echo "Server Public Key: $(cat /etc/wireguard/server_public.key)"
+echo "Client config saved at: /etc/wireguard/client.conf"
