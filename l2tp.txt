@@ -5,9 +5,14 @@
 set -e
 
 # Variables
-VPN_IPSEC_PSK="It@121212322"
-VPN_USER="vpnuser"
-VPN_PASSWORD="vpnpassword"
+VPN_IPSEC_PSK="SuperSecretPSK2026!"
+
+# Define users here (username:password format)
+USERS=(
+  "customer01:StrongPass!88"
+  "customer02:AnotherPass!99"
+  "customer03:SecureKey!77"
+)
 
 echo "=== Installing L2TP/IPsec VPN ==="
 
@@ -70,10 +75,12 @@ lcp-echo-interval 30
 lcp-echo-failure 4
 EOF
 
-# VPN credentials
-cat > /etc/ppp/chap-secrets <<EOF
-$VPN_USER    *   $VPN_PASSWORD   *
-EOF
+# VPN credentials (multi-user)
+> /etc/ppp/chap-secrets
+for user in "${USERS[@]}"; do
+    IFS=":" read -r uname upass <<< "$user"
+    echo "$uname    *   $upass   *" >> /etc/ppp/chap-secrets
+done
 
 # Enable IP forwarding
 echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
@@ -93,11 +100,8 @@ fi
 # NAT masquerading
 PUB_IFACE=$(ip route | grep '^default' | awk '{print $5}')
 iptables -t nat -A POSTROUTING -o $PUB_IFACE -j MASQUERADE
-
-# Persist iptables rules
 netfilter-persistent save
 
-# Reload firewall
 ufw reload
 
 # Restart services (auto-detect correct unit)
@@ -114,5 +118,8 @@ systemctl restart xl2tpd
 echo "=== L2TP/IPsec VPN Setup Complete ==="
 echo "Server IP : $(hostname -I | awk '{print $1}')"
 echo "PSK       : $VPN_IPSEC_PSK"
-echo "Username  : $VPN_USER"
-echo "Password  : $VPN_PASSWORD"
+echo "Accounts:"
+for user in "${USERS[@]}"; do
+    IFS=":" read -r uname upass <<< "$user"
+    echo "  Username: $uname   Password: $upass"
+done
