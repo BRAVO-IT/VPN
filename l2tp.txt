@@ -13,7 +13,7 @@ echo "=== Installing L2TP/IPsec VPN ==="
 
 # Update system
 sudo apt-get update -y
-sudo apt-get install -y strongswan xl2tpd ppp lsof ufw
+sudo apt-get install -y strongswan xl2tpd ppp lsof ufw iptables-persistent
 
 # Configure IPsec
 cat > /etc/ipsec.conf <<EOF
@@ -84,15 +84,20 @@ ufw allow 500/udp
 ufw allow 4500/udp
 ufw allow 1701/udp
 
-# NAT masquerading (replace eth0 with your public interface if different)
+# Enable UFW if not already enabled
+if ! ufw status | grep -q "Status: active"; then
+    echo "Enabling UFW..."
+    ufw --force enable
+fi
+
+# NAT masquerading
 PUB_IFACE=$(ip route | grep '^default' | awk '{print $5}')
-ufw route allow in on ppp+ out on $PUB_IFACE
 iptables -t nat -A POSTROUTING -o $PUB_IFACE -j MASQUERADE
 
 # Persist iptables rules
-apt-get install -y iptables-persistent
 netfilter-persistent save
 
+# Reload firewall
 ufw reload
 
 # Restart services (auto-detect correct unit)
