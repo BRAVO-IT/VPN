@@ -5,7 +5,7 @@
 set -e
 
 # Variables
-VPN_IPSEC_PSK="your_ipsec_psk_here"
+VPN_IPSEC_PSK="It@121212322"
 VPN_USER="vpnuser"
 VPN_PASSWORD="vpnpassword"
 
