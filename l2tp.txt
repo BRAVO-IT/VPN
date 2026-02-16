@@ -1,0 +1,90 @@
+#!/bin/bash
+# L2TP/IPsec VPN Auto Installer for Ubuntu
+# Author: BRAVO (optimized by Copilot)
+
+set -e
+
+# Variables
+VPN_IPSEC_PSK="your_ipsec_psk_here"
+VPN_USER="vpnuser"
+VPN_PASSWORD="vpnpassword"
+
+echo "=== Installing L2TP/IPsec VPN ==="
+
+# Update system
+sudo apt-get update -y
+sudo apt-get install -y strongswan xl2tpd ppp lsof
+
+# Configure IPsec
+cat > /etc/ipsec.conf <<EOF
+config setup
+    charondebug="ike 2, knl 2, cfg 2"
+
+conn L2TP-PSK
+    keyexchange=ikev1
+    authby=secret
+    type=transport
+    left=%any
+    leftprotoport=17/1701
+    right=%any
+    rightprotoport=17/1701
+    auto=add
+EOF
+
+# Shared secret
+cat > /etc/ipsec.secrets <<EOF
+%any %any : PSK "$VPN_IPSEC_PSK"
+EOF
+
+# Configure xl2tpd
+cat > /etc/xl2tpd/xl2tpd.conf <<EOF
+[global]
+port = 1701
+
+[lns default]
+ip range = 192.168.10.10-192.168.10.100
+local ip = 192.168.10.1
+require chap = yes
+refuse pap = yes
+require authentication = yes
+ppp debug = yes
+pppoptfile = /etc/ppp/options.xl2tpd
+length bit = yes
+EOF
+
+# PPP options
+cat > /etc/ppp/options.xl2tpd <<EOF
+require-mschap-v2
+ms-dns 8.8.8.8
+ms-dns 1.1.1.1
+asyncmap 0
+auth
+crtscts
+lock
+hide-password
+modem
+debug
+name l2tpd
+proxyarp
+lcp-echo-interval 30
+lcp-echo-failure 4
+EOF
+
+# VPN credentials
+cat > /etc/ppp/chap-secrets <<EOF
+$VPN_USER    *   $VPN_PASSWORD   *
+EOF
+
+# Enable IP forwarding
+echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+sysctl -p
+
+# Restart services
+systemctl restart strongswan
+systemctl restart xl2tpd
+
+echo "=== L2TP/IPsec VPN Setup Complete ==="
+echo "Server IP : $(hostname -I | awk '{print $1}')"
+echo "PSK       : $VPN_IPSEC_PSK"
+echo "Username  : $VPN_USER"
+echo "Password  : $VPN_PASSWORD"
