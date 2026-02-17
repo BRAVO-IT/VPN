@@ -35,13 +35,13 @@ cat > /etc/ipsec.secrets <<EOF
 %any %any : PSK "$VPN_IPSEC_PSK"
 EOF
 
-# Configure xl2tpd
+# Configure xl2tpd (wide IP pool)
 cat > /etc/xl2tpd/xl2tpd.conf <<EOF
 [global]
 port = 1701
 
 [lns default]
-ip range = 192.168.10.10-192.168.10.100
+ip range = 192.168.10.2-192.168.10.254
 local ip = 192.168.10.1
 require chap = yes
 refuse pap = yes
