@@ -110,8 +110,16 @@ fi
 
 systemctl restart xl2tpd
 
+# Save credentials to file
+CRED_FILE="/root/vpn-credentials.txt"
+{
+    echo "=== L2TP/IPsec VPN Credentials ==="
+    echo "Server IP : $(hostname -I | awk '{print $1}')"
+    echo "PSK       : $VPN_IPSEC_PSK"
+    echo "Username  : $VPN_USER"
+    echo "Password  : $VPN_PASSWORD"
+} > $CRED_FILE
+
 echo "=== L2TP/IPsec VPN Setup Complete ==="
-echo "Server IP : $(hostname -I | awk '{print $1}')"
-echo "PSK       : $VPN_IPSEC_PSK"
-echo "Username  : $VPN_USER"
-echo "Password  : $VPN_PASSWORD"
+cat $CRED_FILE
+echo "Credentials also saved to $CRED_FILE"
