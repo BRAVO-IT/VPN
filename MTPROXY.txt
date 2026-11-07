@@ -1,0 +1,112 @@
+#!/bin/bash
+# MTProxy (mtg v2, fake-TLS) one-command installer
+# Usage:  sudo bash mtproxy.sh
+# Options: PORT=443 DOMAIN=www.microsoft.com sudo -E bash mtproxy.sh
+set -euo pipefail
+
+[ -z "${PORT:-}" ]   && export PORT=443
+[ -z "${DOMAIN:-}" ] && export DOMAIN=www.microsoft.com   # fake-TLS cover domain
+
+[ "$(id -u)" -ne 0 ] && { echo "Run as root (sudo)."; exit 1; }
+
+get_external_address() {
+    local addr
+    addr=$(timeout 3 curl -s http://ipecho.net/plain || \
+           timeout 3 curl -s http://ident.me/ || \
+           timeout 3 curl -s http://whatismyip.akamai.com/ || true)
+    [ -z "$addr" ] && addr="<this server IP address>"
+    echo "$addr"
+}
+
+# ---- Install dependencies ----
+if [ -e /etc/os-release ]; then
+    source /etc/os-release
+    if [[ "$ID" == "ubuntu" || "$ID" == "debian" ]]; then
+        apt update && apt install -y curl tar ca-certificates
+    elif [[ "$ID" == "centos" || "$ID" == "rocky" || "$ID" == "almalinux" ]]; then
+        yum install -y curl tar ca-certificates
+    else
+        echo "Unsupported distribution"; exit 1
+    fi
+else
+    echo "Cannot detect OS"; exit 1
+fi
+
+# ---- Download mtg (latest release) ----
+case "$(uname -m)" in
+    x86_64)  ARCH=amd64 ;;
+    aarch64) ARCH=arm64 ;;
+    *) echo "Unsupported arch: $(uname -m)"; exit 1 ;;
+esac
+
+URL=$(curl -fsSL https://api.github.com/repos/9seconds/mtg/releases/latest \
+      | grep -oP '"browser_download_url":\s*"\K[^"]*linux-'"$ARCH"'\.tar\.gz')
+[ -z "$URL" ] && { echo "Could not find mtg release for $ARCH"; exit 1; }
+
+TMP=$(mktemp -d)
+curl -fsSL "$URL" | tar -xz -C "$TMP"
+install -m 755 "$(find "$TMP" -type f -name mtg | head -n1)" /usr/local/bin/mtg
+rm -rf "$TMP"
+
+# ---- Secret (idempotent) ----
+mkdir -p /etc/mtg
+if [ ! -f /etc/mtg/secret ]; then
+    umask 077
+    /usr/local/bin/mtg generate-secret --hex "$DOMAIN" > /etc/mtg/secret
+fi
+SECRET=$(cat /etc/mtg/secret)
+
+# ---- Config ----
+cat > /etc/mtg/config.toml <<EOF
+secret = "$SECRET"
+bind-to = "0.0.0.0:$PORT"
+EOF
+chmod 644 /etc/mtg/config.toml
+
+# ---- systemd service ----
+cat > /etc/systemd/system/mtg.service <<EOF
+[Unit]
+Description=MTProxy (mtg)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/mtg run /etc/mtg/config.toml
+Restart=always
+RestartSec=3
+DynamicUser=yes
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# ---- Network tuning (idempotent) ----
+for line in "net.core.default_qdisc=fq" "net.ipv4.tcp_congestion_control=bbr"; do
+    grep -qxF "$line" /etc/sysctl.conf || echo "$line" >> /etc/sysctl.conf
+done
+sysctl -p >/dev/null || true
+
+# ---- Firewall ----
+if which ufw >/dev/null 2>&1; then
+    ufw allow "$PORT"/tcp
+    ufw reload || true
+fi
+
+systemctl daemon-reload
+systemctl enable mtg
+systemctl restart mtg
+sleep 2
+systemctl is-active --quiet mtg || { echo "mtg failed to start:"; journalctl -u mtg -n 20 --no-pager; exit 1; }
+
+# ---- Output links ----
+IP=$(get_external_address)
+echo
+echo "MTProxy is running on TCP port $PORT"
+echo
+echo "Connect links (open on a device with Telegram):"
+echo "  tg://proxy?server=$IP&port=$PORT&secret=$SECRET"
+echo "  https://t.me/proxy?server=$IP&port=$PORT&secret=$SECRET"
+echo
+echo "Manage:  systemctl status mtg | journalctl -u mtg -f"
