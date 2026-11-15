@@ -71,10 +71,7 @@ fi
 systemctl stop danted >/dev/null 2>&1 || true
 systemctl disable danted >/dev/null 2>&1 || true
 
-# Stop any previous danted@ instances
-systemctl stop 'danted@*' >/dev/null 2>&1 || true
-
-# Create systemd template service for multi-instance Dante
+# Systemd template service (no failing ExecStartPre, unique pid per IP)
 cat << 'EOF' > /etc/systemd/system/danted@.service
 [Unit]
 Description=SOCKS5 proxy daemon for %I
@@ -83,8 +80,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStartPre=/bin/sh -c 'touch /var/run/danted-%i.pid; chown root:nobody /var/run/danted-%i.pid'
-ExecStart=/usr/sbin/danted -f /etc/danted-%i.conf
+ExecStart=/usr/sbin/danted -f /etc/danted-%i.conf -p /run/danted-%i.pid
 Restart=always
 RestartSec=5
 
@@ -116,7 +112,10 @@ EOF
     cat << EOF > "/etc/danted-${ip}.conf"
 logoutput: syslog
 
-internal: ${ip} port = ${PORT}
+internal.protocol: ipv4
+internal: ${ip} port=${PORT}
+
+external.protocol: ipv4
 external: ${ip}
 
 socksmethod: pam.any
