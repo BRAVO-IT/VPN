@@ -1,11 +1,12 @@
 #!/bin/bash
-# SOCKS5 proxy (Dante) installer for Ubuntu 20.04+ and Debian 11+
+# SOCKS5 proxy (Dante) installer v2 for Ubuntu 20.04+ and Debian 11+
 # Based on: https://github.com/BRAVO-IT/VPN (author: BRAVO_IT)
 #
 # Usage (run as root or with sudo):
-#   sudo bash socks5-install.sh                  # port 8080, user "user", random password
-#   sudo bash socks5-install.sh 1080             # custom port
-#   sudo bash socks5-install.sh 1080 myuser mypass
+#   sudo bash socks5-install-v2.sh                       # port 8080, user "user", random password
+#   sudo bash socks5-install-v2.sh 8080 user mypassword  # custom port / user / password
+#
+# Safe to run again: it rewrites the config and restarts the service.
 
 set -u
 
@@ -17,6 +18,7 @@ fi
 PORT="${1:-8080}"
 PROXY_USER="${2:-user}"
 PROXY_PASS="${3:-$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)}"
+LOG=/var/log/danted.log
 
 # ---- OS check -------------------------------------------------------------
 [ -e /etc/os-release ] && . /etc/os-release
@@ -28,26 +30,30 @@ case "${ID:-}" in
     *)      echo "Unsupported OS: ${PRETTY_NAME:-unknown}. Use Ubuntu 20.04+ or Debian 11+."; exit 1 ;;
 esac
 
-# ---- helpers --------------------------------------------------------------
+# ---- network info ---------------------------------------------------------
+IFACE=$(ip -4 route get 8.8.8.8 | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+LOCAL_IP=$(ip -4 addr show "$IFACE" 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -1)
+if [ -z "$IFACE" ] || [ -z "$LOCAL_IP" ]; then
+    echo "Could not detect the network interface or its IPv4 address."
+    exit 1
+fi
+
 get_external_address() {
     local addr
-    addr=$( timeout 3 curl -4 -s https://ifconfig.me \
-         || timeout 3 curl -4 -s http://ident.me \
-         || timeout 3 curl -4 -s http://ipecho.net/plain )
+    addr=$( timeout 4 curl -4 -s https://ifconfig.me \
+         || timeout 4 curl -4 -s http://ident.me \
+         || timeout 4 curl -4 -s http://ipecho.net/plain )
     [ -z "$addr" ] && addr="<this server IP address>"
     echo "$addr"
 }
-
-IFACE=$(ip -4 route get 8.8.8.8 | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
-if [ -z "$IFACE" ]; then
-    echo "Could not detect the network interface."
-    exit 1
-fi
 
 # ---- install --------------------------------------------------------------
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y dante-server libpam-pwdfile openssl curl
+
+# stop the package's default (empty-config) instance before we write ours
+systemctl stop danted 2>/dev/null || true
 
 # password file (md5-crypt hash)
 echo "${PROXY_USER}:$(openssl passwd -1 "$PROXY_PASS")" > /etc/danted.passwd
@@ -59,11 +65,17 @@ auth required pam_pwdfile.so nodelay pwdfile=/etc/danted.passwd
 account required pam_permit.so
 EOF
 
-# Dante config (IPv4 + IPv6)
+# log file that the service can always write to
+touch "$LOG"
+chmod 666 "$LOG"
+
+# Dante config: IPv4 only (IPv6 outbound caused failed requests from phone apps)
 cat > /etc/danted.conf <<EOF
-internal.protocol: ipv4 ipv6
+logoutput: ${LOG}
+
+internal.protocol: ipv4
 internal: ${IFACE} port=${PORT}
-external.protocol: ipv4 ipv6
+external.protocol: ipv4
 external: ${IFACE}
 
 socksmethod: pam.any
@@ -73,33 +85,19 @@ user.notprivileged: nobody
 
 client pass {
         from: 0.0.0.0/0 to: 0.0.0.0/0
-        log: error
-}
-
-client pass {
-        from: ::/0 to: ::/0
-        log: error
+        log: connect disconnect error
 }
 
 # deny proxied connections to loopback
 socks block {
-    from: 0.0.0.0/0 to: 127.0.0.0/8
-    log: error
-}
-
-socks block {
-    from: ::/0 to: ::1/128
-    log: error
+        from: 0.0.0.0/0 to: 127.0.0.0/8
+        log: connect error
 }
 
 socks pass {
         from: 0.0.0.0/0 to: 0.0.0.0/0
-        log: error
-}
-
-socks pass {
-        from: ::/0 to: ::/0
-        log: error
+        command: bind connect udpassociate
+        log: connect disconnect error
 }
 EOF
 
@@ -109,21 +107,35 @@ if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
 fi
 
 # ---- start service --------------------------------------------------------
-systemctl enable danted
+systemctl enable danted >/dev/null 2>&1
 systemctl restart danted
-sleep 1
+sleep 2
 
-if systemctl is-active --quiet danted; then
-    echo ""
-    echo "Your SOCKS5 proxy is ready:"
-    printf "Protocol : SOCKS5\n"
-    printf "Address  : %s\n" "$(get_external_address)"
-    printf "Port     : %s\n" "$PORT"
-    printf "User     : %s\n" "$PROXY_USER"
-    printf "Pass     : %s\n" "$PROXY_PASS"
-    echo ""
-    echo "Remember to allow TCP port ${PORT} in the Vultr firewall group."
-else
+if ! systemctl is-active --quiet danted; then
     echo "danted failed to start. Check: systemctl status danted  /  journalctl -xeu danted"
     exit 1
 fi
+
+# ---- self-test (same kind of request a phone app makes) -------------------
+CODE=$(curl -s -m 20 -o /dev/null -w '%{http_code}' \
+        --socks5-hostname "${LOCAL_IP}:${PORT}" \
+        --proxy-user "${PROXY_USER}:${PROXY_PASS}" \
+        https://www.google.com 2>/dev/null)
+
+echo ""
+echo "Your SOCKS5 proxy:"
+printf "Protocol : SOCKS5\n"
+printf "Address  : %s\n" "$(get_external_address)"
+printf "Port     : %s\n" "$PORT"
+printf "User     : %s\n" "$PROXY_USER"
+printf "Pass     : %s\n" "$PROXY_PASS"
+echo ""
+
+case "$CODE" in
+    200|301|302) echo "Self-test: OK (HTTP $CODE through the proxy)" ;;
+    *)           echo "Self-test: FAILED (got '${CODE:-no response}'). Check: tail -n 30 ${LOG}" ;;
+esac
+
+echo ""
+echo "Remember to allow TCP port ${PORT} in the Vultr firewall group."
+echo "Watch connections live with: tail -f ${LOG}"
