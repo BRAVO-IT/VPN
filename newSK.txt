@@ -1,10 +1,10 @@
 #!/bin/bash
-# SOCKS5 proxy (Dante) installer v3 for Ubuntu 20.04+ and Debian 11+
+# SOCKS5 proxy (Dante) installer v4 (multi-IP) for Ubuntu 20.04+ and Debian 11+
 # Based on: https://github.com/BRAVO-IT/VPN (author: BRAVO_IT)
 #
 # Usage (run as root or with sudo):
-#   sudo bash socks5-install-v3.sh                       # port 8080, user "user", random password
-#   sudo bash socks5-install-v3.sh 8080 user mypassword  # custom port / user / password
+#   sudo bash socks5-install-v4.sh                       # port 8080, user "user", random password
+#   sudo bash socks5-install-v4.sh 8080 user mypassword  # custom port / user / password
 #
 # Safe to run again: it rewrites the config and restarts the service.
 
@@ -31,7 +31,16 @@ esac
 
 # ---- network info ---------------------------------------------------------
 IFACE=$(ip -4 route get 8.8.8.8 | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
-LOCAL_IP=$(ip -4 addr show "$IFACE" 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -1)
+ALL_IPS=$(ip -4 -o addr show dev "$IFACE" scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
+LOCAL_IP=$(echo "$ALL_IPS" | head -1)
+INTERNAL_LINES=""
+EXTERNAL_LINES=""
+for ip in $ALL_IPS; do
+    INTERNAL_LINES="${INTERNAL_LINES}internal: ${ip} port=${PORT}
+"
+    EXTERNAL_LINES="${EXTERNAL_LINES}external: ${ip}
+"
+done
 if [ -z "$IFACE" ] || [ -z "$LOCAL_IP" ]; then
     echo "Could not detect the network interface or its IPv4 address."
     exit 1
@@ -69,9 +78,9 @@ cat > /etc/danted.conf <<EOF
 logoutput: syslog
 
 internal.protocol: ipv4
-internal: ${IFACE} port=${PORT}
+${INTERNAL_LINES}
 external.protocol: ipv4
-external: ${IFACE}
+${EXTERNAL_LINES}external.rotation: same-same
 
 socksmethod: pam.any
 
@@ -111,26 +120,28 @@ if ! systemctl is-active --quiet danted; then
     exit 1
 fi
 
-# ---- self-test (same kind of request a phone app makes) -------------------
-CODE=$(curl -s -m 20 -o /dev/null -w '%{http_code}' \
-        --socks5-hostname "${LOCAL_IP}:${PORT}" \
-        --proxy-user "${PROXY_USER}:${PROXY_PASS}" \
-        https://www.google.com 2>/dev/null)
-
+# ---- self-test: one request through every IP -----------------------------
 echo ""
-echo "Your SOCKS5 proxy:"
+echo "Your SOCKS5 proxy (same port, user and password on every IP):"
 printf "Protocol : SOCKS5\n"
-printf "Address  : %s\n" "$(get_external_address)"
 printf "Port     : %s\n" "$PORT"
 printf "User     : %s\n" "$PROXY_USER"
 printf "Pass     : %s\n" "$PROXY_PASS"
 echo ""
 
-case "$CODE" in
-    200|301|302) echo "Self-test: OK (HTTP $CODE through the proxy)" ;;
-    *)           echo "Self-test: FAILED (got '${CODE:-no response}'). Check: journalctl -u danted -n 30 --no-pager" ;;
-esac
+FAILED=0
+for ip in $ALL_IPS; do
+    OUT=$(curl -s -m 20 --socks5-hostname "${ip}:${PORT}" \
+            --proxy-user "${PROXY_USER}:${PROXY_PASS}" https://ifconfig.me 2>/dev/null)
+    if [ -n "$OUT" ]; then
+        echo "Address  : ${ip}   -> exits as ${OUT}   [OK]"
+    else
+        echo "Address  : ${ip}   -> [FAILED]"
+        FAILED=1
+    fi
+done
 
 echo ""
+[ "$FAILED" -eq 1 ] && echo "Some IPs failed. Check: journalctl -u danted -n 30 --no-pager"
 echo "Remember to allow TCP port ${PORT} in the Vultr firewall group."
 echo "Watch connections live with: journalctl -u danted -f"
