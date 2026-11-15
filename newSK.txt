@@ -1,0 +1,129 @@
+#!/bin/bash
+# SOCKS5 proxy (Dante) installer for Ubuntu 20.04+ and Debian 11+
+# Based on: https://github.com/BRAVO-IT/VPN (author: BRAVO_IT)
+#
+# Usage (run as root or with sudo):
+#   sudo bash socks5-install.sh                  # port 8080, user "user", random password
+#   sudo bash socks5-install.sh 1080             # custom port
+#   sudo bash socks5-install.sh 1080 myuser mypass
+
+set -u
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Please run as root: sudo bash $0"
+    exit 1
+fi
+
+PORT="${1:-8080}"
+PROXY_USER="${2:-user}"
+PROXY_PASS="${3:-$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)}"
+
+# ---- OS check -------------------------------------------------------------
+[ -e /etc/os-release ] && . /etc/os-release
+MAJOR="${VERSION_ID%%.*}"
+
+case "${ID:-}" in
+    ubuntu) [ "${MAJOR:-0}" -ge 20 ] || { echo "Ubuntu 20.04 or newer is required."; exit 1; } ;;
+    debian) [ "${MAJOR:-0}" -ge 11 ] || { echo "Debian 11 or newer is required."; exit 1; } ;;
+    *)      echo "Unsupported OS: ${PRETTY_NAME:-unknown}. Use Ubuntu 20.04+ or Debian 11+."; exit 1 ;;
+esac
+
+# ---- helpers --------------------------------------------------------------
+get_external_address() {
+    local addr
+    addr=$( timeout 3 curl -4 -s https://ifconfig.me \
+         || timeout 3 curl -4 -s http://ident.me \
+         || timeout 3 curl -4 -s http://ipecho.net/plain )
+    [ -z "$addr" ] && addr="<this server IP address>"
+    echo "$addr"
+}
+
+IFACE=$(ip -4 route get 8.8.8.8 | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+if [ -z "$IFACE" ]; then
+    echo "Could not detect the network interface."
+    exit 1
+fi
+
+# ---- install --------------------------------------------------------------
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y dante-server libpam-pwdfile openssl curl
+
+# password file (md5-crypt hash)
+echo "${PROXY_USER}:$(openssl passwd -1 "$PROXY_PASS")" > /etc/danted.passwd
+chmod 600 /etc/danted.passwd
+
+# PAM auth for sockd
+cat > /etc/pam.d/sockd <<EOF
+auth required pam_pwdfile.so nodelay pwdfile=/etc/danted.passwd
+account required pam_permit.so
+EOF
+
+# Dante config (IPv4 + IPv6)
+cat > /etc/danted.conf <<EOF
+internal.protocol: ipv4 ipv6
+internal: ${IFACE} port=${PORT}
+external.protocol: ipv4 ipv6
+external: ${IFACE}
+
+socksmethod: pam.any
+
+user.privileged: root
+user.notprivileged: nobody
+
+client pass {
+        from: 0.0.0.0/0 to: 0.0.0.0/0
+        log: error
+}
+
+client pass {
+        from: ::/0 to: ::/0
+        log: error
+}
+
+# deny proxied connections to loopback
+socks block {
+    from: 0.0.0.0/0 to: 127.0.0.0/8
+    log: error
+}
+
+socks block {
+    from: ::/0 to: ::1/128
+    log: error
+}
+
+socks pass {
+        from: 0.0.0.0/0 to: 0.0.0.0/0
+        log: error
+}
+
+socks pass {
+        from: ::/0 to: ::/0
+        log: error
+}
+EOF
+
+# ---- firewall (only if ufw is installed and active) -----------------------
+if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
+    ufw allow "${PORT}/tcp"
+fi
+
+# ---- start service --------------------------------------------------------
+systemctl enable danted
+systemctl restart danted
+sleep 1
+
+if systemctl is-active --quiet danted; then
+    echo ""
+    echo "Your SOCKS5 proxy is ready:"
+    printf "Protocol : SOCKS5\n"
+    printf "Address  : %s\n" "$(get_external_address)"
+    printf "Port     : %s\n" "$PORT"
+    printf "User     : %s\n" "$PROXY_USER"
+    printf "Pass     : %s\n" "$PROXY_PASS"
+    echo ""
+    echo "Remember to allow TCP port ${PORT} in the Vultr firewall group."
+else
+    echo "danted failed to start. Check: systemctl status danted  /  journalctl -xeu danted"
+    exit 1
+fi
