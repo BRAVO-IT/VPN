@@ -1,23 +1,32 @@
 #!/bin/bash
-# SOCKS5 proxy (Dante) installer v4 (multi-IP) for Ubuntu 20.04+ and Debian 11+
+# SOCKS5 proxy (Dante) multi-IP installer for Ubuntu 20.04+ and Debian 11+
 # Based on: https://github.com/BRAVO-IT/VPN (author: BRAVO_IT)
 #
-# Usage (run as root or with sudo):
-#   sudo bash socks5-install-v4.sh                       # port 8080, user "user", random password
-#   sudo bash socks5-install-v4.sh 8080 user mypassword  # custom port / user / password
+# Usage (as root, or through sudo):
+#   curl -fsSL YOUR_RAW_URL | sudo bash -s -- IP1,IP2,IP3 [PORT] [USER] [PASSWORD]
 #
-# Safe to run again: it rewrites the config and restarts the service.
+# Examples:
+#   ... | sudo bash -s -- 45.77.60.139,45.77.60.140            # extra IPs, port 8080, user "user", random password
+#   ... | sudo bash -s -- 45.77.60.139 8080 user MyPass123     # choose port, user and password
+#   ... | sudo bash                                             # no extra IPs: just the main IP
+#
+# Notes:
+#  - List only the EXTRA IPs. The main IP is added automatically.
+#  - The IP list you give replaces the previous extra-IP list on this server.
+#  - Vultr needs one restart from the Vultr panel after adding a new additional IP.
 
 set -u
 
 if [ "$(id -u)" -ne 0 ]; then
-    echo "Please run as root: sudo bash $0"
+    echo "Please run as root (use sudo)."
     exit 1
 fi
 
-PORT="${1:-8080}"
-PROXY_USER="${2:-user}"
-PROXY_PASS="${3:-$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)}"
+EXTRA_RAW="${1:-}"
+PORT="${2:-8080}"
+PROXY_USER="${3:-user}"
+PROXY_PASS="${4:-$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)}"
+[ "$EXTRA_RAW" = "-" ] && EXTRA_RAW=""
 
 # ---- OS check -------------------------------------------------------------
 [ -e /etc/os-release ] && . /etc/os-release
@@ -31,8 +40,59 @@ esac
 
 # ---- network info ---------------------------------------------------------
 IFACE=$(ip -4 route get 8.8.8.8 | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+MAIN_IP=$(ip -4 route get 8.8.8.8 | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
+if [ -z "$IFACE" ] || [ -z "$MAIN_IP" ]; then
+    echo "Could not detect the network interface or main IP."
+    exit 1
+fi
+
+# ---- add extra IPs (only when a list was given) ---------------------------
+NEEDS_RESTART=0
+EXTRA_IPS=""
+if [ -n "$EXTRA_RAW" ]; then
+    for ip in $(echo "$EXTRA_RAW" | tr ',; ' '\n\n\n'); do
+        [ -z "$ip" ] && continue
+        if ! echo "$ip" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$'; then
+            echo "Invalid IP address: $ip"
+            exit 1
+        fi
+        [ "$ip" = "$MAIN_IP" ] && continue          # main IP is added automatically
+        EXTRA_IPS="$EXTRA_IPS $ip"
+    done
+
+    if [ -n "$EXTRA_IPS" ]; then
+        if command -v netplan >/dev/null 2>&1; then
+            {
+                echo "network:"
+                echo "  version: 2"
+                echo "  ethernets:"
+                echo "    ${IFACE}:"
+                echo "      addresses:"
+                for ip in $EXTRA_IPS; do echo "        - ${ip}/32"; done
+            } > /etc/netplan/60-extra-ip.yaml
+            chmod 600 /etc/netplan/60-extra-ip.yaml
+            netplan apply
+        else
+            echo "netplan not found: adding IPs for this boot only (not persistent)."
+            for ip in $EXTRA_IPS; do
+                ip addr show dev "$IFACE" | grep -qw "inet ${ip}/32" || ip addr add "${ip}/32" dev "$IFACE"
+            done
+        fi
+        sleep 3
+
+        # can each extra IP send traffic out?
+        for ip in $EXTRA_IPS; do
+            OUT=$(curl -4 -s -m 10 --interface "$ip" https://ifconfig.me 2>/dev/null)
+            if [ "$OUT" != "$ip" ]; then
+                echo "Warning: $ip cannot send traffic out yet."
+                NEEDS_RESTART=1
+            fi
+        done
+    fi
+fi
+
+# every IPv4 now on the interface (main + extras)
 ALL_IPS=$(ip -4 -o addr show dev "$IFACE" scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
-LOCAL_IP=$(echo "$ALL_IPS" | head -1)
 INTERNAL_LINES=""
 EXTERNAL_LINES=""
 for ip in $ALL_IPS; do
@@ -41,19 +101,6 @@ for ip in $ALL_IPS; do
     EXTERNAL_LINES="${EXTERNAL_LINES}external: ${ip}
 "
 done
-if [ -z "$IFACE" ] || [ -z "$LOCAL_IP" ]; then
-    echo "Could not detect the network interface or its IPv4 address."
-    exit 1
-fi
-
-get_external_address() {
-    local addr
-    addr=$( timeout 4 curl -4 -s https://ifconfig.me \
-         || timeout 4 curl -4 -s http://ident.me \
-         || timeout 4 curl -4 -s http://ipecho.net/plain )
-    [ -z "$addr" ] && addr="<this server IP address>"
-    echo "$addr"
-}
 
 # ---- install --------------------------------------------------------------
 export DEBIAN_FRONTEND=noninteractive
@@ -73,7 +120,7 @@ auth required pam_pwdfile.so nodelay pwdfile=/etc/danted.passwd
 account required pam_permit.so
 EOF
 
-# Dante config: IPv4 only (IPv6 outbound caused failed requests from phone apps)
+# Dante config: listens on every IP, sends out from the same IP the client used
 cat > /etc/danted.conf <<EOF
 logoutput: syslog
 
@@ -110,6 +157,19 @@ if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     ufw allow "${PORT}/tcp"
 fi
 
+# wait for the network (extra IPs) at boot and restart automatically on failure
+mkdir -p /etc/systemd/system/danted.service.d
+cat > /etc/systemd/system/danted.service.d/override.conf <<'EOF'
+[Unit]
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Restart=on-failure
+RestartSec=5
+EOF
+systemctl daemon-reload
+
 # ---- start service --------------------------------------------------------
 systemctl enable danted >/dev/null 2>&1
 systemctl restart danted
@@ -120,7 +180,7 @@ if ! systemctl is-active --quiet danted; then
     exit 1
 fi
 
-# ---- self-test: one request through every IP -----------------------------
+# ---- self-test: one request through every IP ------------------------------
 echo ""
 echo "Your SOCKS5 proxy (same port, user and password on every IP):"
 printf "Protocol : SOCKS5\n"
@@ -142,6 +202,11 @@ for ip in $ALL_IPS; do
 done
 
 echo ""
-[ "$FAILED" -eq 1 ] && echo "Some IPs failed. Check: journalctl -u danted -n 30 --no-pager"
+if [ "$FAILED" -eq 1 ] || [ "$NEEDS_RESTART" -eq 1 ]; then
+    echo "Some IPs are not working yet. For a NEW additional IP, restart the server"
+    echo "from the Vultr panel (not 'reboot'), wait a minute, then check with:"
+    echo "  journalctl -u danted -n 30 --no-pager"
+    echo "The settings are saved, so you do not need to run this again after the restart."
+fi
 echo "Remember to allow TCP port ${PORT} in the Vultr firewall group."
 echo "Watch connections live with: journalctl -u danted -f"
