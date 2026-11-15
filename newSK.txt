@@ -1,14 +1,5 @@
+cat << 'EOF' > /root/run.sh
 #!/bin/bash
-# SOCKS5 proxy (Dante) multi-IP installer for Ubuntu 20.04+ and Debian 11+
-# Based on: https://github.com/BRAVO-IT/VPN (author: BRAVO_IT)
-#
-# Usage (as root or through sudo):
-#   curl -L YOUR_RAW_URL | sudo bash -s -- "IP1,IP2,IP3,..." [PORT] [USER] [PASSWORD]
-#
-# Examples:
-#   ... | sudo bash -s -- 108.61.209.191,45.77.60.139,217.69.6.170
-#   ... | sudo bash -s -- 108.61.209.191,45.77.60.139,217.69.6.170 8080 myuser mypass123
-
 set -u
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -18,19 +9,7 @@ fi
 
 EXTRA_RAW="${1:-}"
 PORT="${2:-8080}"
-PROXY_USER="${3:-user}"
-PROXY_PASS="${4:-$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)}"
 [ "$EXTRA_RAW" = "-" ] && EXTRA_RAW=""
-
-# ---- OS check -------------------------------------------------------------
-[ -e /etc/os-release ] && . /etc/os-release
-MAJOR="${VERSION_ID%%.*}"
-
-case "${ID:-}" in
-    ubuntu) [ "${MAJOR:-0}" -ge 20 ] || { echo "Ubuntu 20.04 or newer is required."; exit 1; } ;;
-    debian) [ "${MAJOR:-0}" -ge 11 ] || { echo "Debian 11 or newer is required."; exit 1; } ;;
-    *)      echo "Unsupported OS: ${PRETTY_NAME:-unknown}. Use Ubuntu 20.04+ or Debian 11+."; exit 1 ;;
-esac
 
 # ---- network info ---------------------------------------------------------
 IFACE=$(ip -4 route get 8.8.8.8 | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
@@ -40,7 +19,7 @@ if [ -z "$IFACE" ] || [ -z "$MAIN_IP" ]; then
     exit 1
 fi
 
-# ---- Kernel multi-subnet support (rp_filter) ------------------------------
+# Multi-subnet routing support
 sysctl -w net.ipv4.conf.all.rp_filter=2 >/dev/null 2>&1 || true
 sysctl -w net.ipv4.conf.default.rp_filter=2 >/dev/null 2>&1 || true
 sysctl -w net.ipv4.conf."${IFACE}".rp_filter=2 >/dev/null 2>&1 || true
@@ -50,33 +29,27 @@ net.ipv4.conf.all.rp_filter = 2
 net.ipv4.conf.default.rp_filter = 2
 SYSCTL
 
-# ---- Install dependencies -------------------------------------------------
+# Install dependencies
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq dante-server libpam-pwdfile openssl curl iputils-arping
 
-# ---- Add extra IPs --------------------------------------------------------
-NEEDS_RESTART=0
+# Add extra IPs
 EXTRA_IPS=""
 if [ -n "$EXTRA_RAW" ]; then
     for ip in $(echo "$EXTRA_RAW" | tr ',; \t\r' '\n\n\n\n\n'); do
         [ -z "$ip" ] && continue
         if ! echo "$ip" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$'; then
-            echo "Skipping invalid IP: $ip"
             continue
         fi
         [ "$ip" = "$MAIN_IP" ] && continue
 
         EXTRA_IPS="$EXTRA_IPS $ip"
-
-        # Bind IP to interface immediately
         ip addr show dev "$IFACE" | grep -qw "inet ${ip}/32" || ip addr add "${ip}/32" dev "$IFACE"
-
-        # Announce IP to router
         arping -U -c 2 -w 1 -I "$IFACE" "$ip" >/dev/null 2>&1 || true
     done
 
-    # Persist in Netplan across reboots
+    # Persist in Netplan
     if [ -n "$EXTRA_IPS" ] && command -v netplan >/dev/null 2>&1; then
         {
             echo "network:"
@@ -89,18 +62,9 @@ if [ -n "$EXTRA_RAW" ]; then
         chmod 600 /etc/netplan/60-extra-ip.yaml
         netplan apply >/dev/null 2>&1 || true
     fi
-
-    # Check outgoing connectivity for each secondary IP
-    for ip in $EXTRA_IPS; do
-        OUT=$(curl -4 -s -m 5 --interface "$ip" https://ifconfig.me 2>/dev/null || true)
-        if [ "$OUT" != "$ip" ]; then
-            echo "Warning: $ip cannot send traffic out yet."
-            NEEDS_RESTART=1
-        fi
-    done
 fi
 
-# ---- Gather all IPs on the interface (main + extra) -----------------------
+# Gather all IPs
 ALL_IPS=$(ip -4 -o addr show dev "$IFACE" scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
 
 INTERNAL_LINES=""
@@ -112,20 +76,34 @@ for ip in $ALL_IPS; do
 "
 done
 
-# ---- Configure Dante ------------------------------------------------------
+# Stop danted to update config
 systemctl stop danted 2>/dev/null || true
 
-# User password
-echo "${PROXY_USER}:$(openssl passwd -1 "$PROXY_PASS")" > /etc/danted.passwd
+# Generate unique user and random password for EACH IP
+> /etc/danted.passwd
+NODE_LIST=()
+INDEX=1
+
+for ip in $ALL_IPS; do
+    USER="user${INDEX}"
+    PASS=$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)
+    
+    # Add to password file (md5-crypt hash)
+    echo "${USER}:$(openssl passwd -1 "$PASS")" >> /etc/danted.passwd
+    
+    # Store node info for display
+    NODE_LIST+=("${ip}:${PORT}:${USER}:${PASS}")
+    INDEX=$((INDEX + 1))
+done
 chmod 600 /etc/danted.passwd
 
-# PAM configuration
+# PAM config
 cat > /etc/pam.d/sockd << 'EOF'
 auth required pam_pwdfile.so nodelay pwdfile=/etc/danted.passwd
 account required pam_permit.so
 EOF
 
-# Dante configuration
+# Dante config
 cat > /etc/danted.conf << EOF
 logoutput: syslog
 
@@ -146,7 +124,6 @@ client pass {
 
 socks block {
         from: 0.0.0.0/0 to: 127.0.0.0/8
-        log: error
 }
 
 socks pass {
@@ -156,12 +133,12 @@ socks pass {
 }
 EOF
 
-# ---- Firewall -------------------------------------------------------------
+# Firewall
 if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     ufw allow "${PORT}/tcp" >/dev/null 2>&1 || true
 fi
 
-# Systemd override for auto-recovery
+# Systemd override
 mkdir -p /etc/systemd/system/danted.service.d
 cat > /etc/systemd/system/danted.service.d/override.conf << 'EOF'
 [Unit]
@@ -174,48 +151,37 @@ RestartSec=5
 EOF
 systemctl daemon-reload
 
-# Start Dante
 systemctl enable danted >/dev/null 2>&1
 systemctl restart danted
 sleep 2
 
-if ! systemctl is-active --quiet danted; then
-    echo "danted failed to start. Check: systemctl status danted / journalctl -xeu danted"
-    exit 1
-fi
-
-# ---- Self-test and output -------------------------------------------------
+# ---- Self-Test and Output ----
 echo ""
 echo "================================================================"
-echo "                   YOUR SOCKS5 PROXY NODES                      "
+echo "          YOUR SOCKS5 PROXIES (DIFFERENT PASSWORDS)             "
 echo "================================================================"
-echo "Protocol : SOCKS5"
-echo "Port     : $PORT"
-echo "User     : $PROXY_USER"
-echo "Pass     : $PROXY_PASS"
-echo "----------------------------------------------------------------"
 echo "Proxy List (IP:Port:User:Pass):"
-for ip in $ALL_IPS; do
-    echo "  ${ip}:${PORT}:${PROXY_USER}:${PROXY_PASS}"
+for node in "${NODE_LIST[@]}"; do
+    echo "  $node"
 done
 echo "----------------------------------------------------------------"
 echo "Testing Live Nodes:"
-FAILED=0
-for ip in $ALL_IPS; do
-    OUT=$(curl -s -m 8 --socks5-hostname "${ip}:${PORT}" \
-            --proxy-user "${PROXY_USER}:${PROXY_PASS}" https://ifconfig.me 2>/dev/null || true)
-    if [ "$OUT" = "$ip" ]; then
-        echo "Address  : ${ip}   -> exits as ${OUT}   [OK]"
+
+for node in "${NODE_LIST[@]}"; do
+    node_ip=$(echo "$node" | cut -d: -f1)
+    node_port=$(echo "$node" | cut -d: -f2)
+    node_user=$(echo "$node" | cut -d: -f3)
+    node_pass=$(echo "$node" | cut -d: -f4)
+
+    OUT=$(curl -s -m 8 --socks5-hostname "${node_ip}:${node_port}" \
+            --proxy-user "${node_user}:${node_pass}" https://ifconfig.me 2>/dev/null || true)
+    if [ "$OUT" = "$node_ip" ]; then
+        echo "Address  : ${node_ip}   -> exits as ${OUT}   [OK]"
     else
-        echo "Address  : ${ip}   -> [FAILED]"
-        FAILED=1
+        echo "Address  : ${node_ip}   -> [FAILED]"
     fi
 done
 echo "================================================================"
+EOF
 
-if [ "$FAILED" -eq 1 ] || [ "$NEEDS_RESTART" -eq 1 ]; then
-    echo ""
-    echo "NOTICE: If an address showed [FAILED], and it is a NEW additional IP on Vultr,"
-    echo "restart the server from the Vultr web panel (not 'reboot'), wait 1 minute, and it will work."
-    echo "All settings are already saved permanently."
-fi
+chmod +x /root/run.sh
