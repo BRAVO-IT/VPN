@@ -1,5 +1,7 @@
-cat << 'EOF' > /root/run.sh
 #!/bin/bash
+# SOCKS5 proxy (Dante) multi-IP installer with UNIQUE PASSWORDS per IP
+# Based on: https://github.com/BRAVO-IT/VPN (author: BRAVO_IT)
+
 set -u
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -19,7 +21,7 @@ if [ -z "$IFACE" ] || [ -z "$MAIN_IP" ]; then
     exit 1
 fi
 
-# Multi-subnet routing support
+# Kernel multi-subnet support (rp_filter)
 sysctl -w net.ipv4.conf.all.rp_filter=2 >/dev/null 2>&1 || true
 sysctl -w net.ipv4.conf.default.rp_filter=2 >/dev/null 2>&1 || true
 sysctl -w net.ipv4.conf."${IFACE}".rp_filter=2 >/dev/null 2>&1 || true
@@ -76,34 +78,34 @@ for ip in $ALL_IPS; do
 "
 done
 
-# Stop danted to update config
+# Stop danted before updating
 systemctl stop danted 2>/dev/null || true
 
-# Generate unique user and random password for EACH IP
+# Generate UNIQUE user and UNIQUE random password for EACH IP
 > /etc/danted.passwd
 NODE_LIST=()
 INDEX=1
 
 for ip in $ALL_IPS; do
-    USER="user${INDEX}"
-    PASS=$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)
+    NODE_USER="user${INDEX}"
+    NODE_PASS=$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)
     
-    # Add to password file (md5-crypt hash)
-    echo "${USER}:$(openssl passwd -1 "$PASS")" >> /etc/danted.passwd
+    # Save user & unique password to PAM password file
+    echo "${NODE_USER}:$(openssl passwd -1 "$NODE_PASS")" >> /etc/danted.passwd
     
-    # Store node info for display
-    NODE_LIST+=("${ip}:${PORT}:${USER}:${PASS}")
+    # Save to node list
+    NODE_LIST+=("${ip}:${PORT}:${NODE_USER}:${NODE_PASS}")
     INDEX=$((INDEX + 1))
 done
 chmod 600 /etc/danted.passwd
 
-# PAM config
+# PAM configuration
 cat > /etc/pam.d/sockd << 'EOF'
 auth required pam_pwdfile.so nodelay pwdfile=/etc/danted.passwd
 account required pam_permit.so
 EOF
 
-# Dante config
+# Dante configuration
 cat > /etc/danted.conf << EOF
 logoutput: syslog
 
@@ -138,7 +140,7 @@ if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     ufw allow "${PORT}/tcp" >/dev/null 2>&1 || true
 fi
 
-# Systemd override
+# Systemd override for auto-recovery
 mkdir -p /etc/systemd/system/danted.service.d
 cat > /etc/systemd/system/danted.service.d/override.conf << 'EOF'
 [Unit]
@@ -155,7 +157,7 @@ systemctl enable danted >/dev/null 2>&1
 systemctl restart danted
 sleep 2
 
-# ---- Self-Test and Output ----
+# Output and Self-test
 echo ""
 echo "================================================================"
 echo "          YOUR SOCKS5 PROXIES (DIFFERENT PASSWORDS)             "
@@ -176,12 +178,9 @@ for node in "${NODE_LIST[@]}"; do
     OUT=$(curl -s -m 8 --socks5-hostname "${node_ip}:${node_port}" \
             --proxy-user "${node_user}:${node_pass}" https://ifconfig.me 2>/dev/null || true)
     if [ "$OUT" = "$node_ip" ]; then
-        echo "Address  : ${node_ip}   -> exits as ${OUT}   [OK]"
+        echo "Address  : ${node_ip} (${node_user})   -> exits as ${OUT}   [OK]"
     else
-        echo "Address  : ${node_ip}   -> [FAILED]"
+        echo "Address  : ${node_ip} (${node_user})   -> [FAILED]"
     fi
 done
 echo "================================================================"
-EOF
-
-chmod +x /root/run.sh
