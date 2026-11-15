@@ -1,10 +1,10 @@
 #!/bin/bash
-# SOCKS5 proxy (Dante) installer v2 for Ubuntu 20.04+ and Debian 11+
+# SOCKS5 proxy (Dante) installer v3 for Ubuntu 20.04+ and Debian 11+
 # Based on: https://github.com/BRAVO-IT/VPN (author: BRAVO_IT)
 #
 # Usage (run as root or with sudo):
-#   sudo bash socks5-install-v2.sh                       # port 8080, user "user", random password
-#   sudo bash socks5-install-v2.sh 8080 user mypassword  # custom port / user / password
+#   sudo bash socks5-install-v3.sh                       # port 8080, user "user", random password
+#   sudo bash socks5-install-v3.sh 8080 user mypassword  # custom port / user / password
 #
 # Safe to run again: it rewrites the config and restarts the service.
 
@@ -18,7 +18,6 @@ fi
 PORT="${1:-8080}"
 PROXY_USER="${2:-user}"
 PROXY_PASS="${3:-$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)}"
-LOG=/var/log/danted.log
 
 # ---- OS check -------------------------------------------------------------
 [ -e /etc/os-release ] && . /etc/os-release
@@ -65,13 +64,9 @@ auth required pam_pwdfile.so nodelay pwdfile=/etc/danted.passwd
 account required pam_permit.so
 EOF
 
-# log file that the service can always write to
-touch "$LOG"
-chmod 666 "$LOG"
-
 # Dante config: IPv4 only (IPv6 outbound caused failed requests from phone apps)
 cat > /etc/danted.conf <<EOF
-logoutput: ${LOG}
+logoutput: syslog
 
 internal.protocol: ipv4
 internal: ${IFACE} port=${PORT}
@@ -133,9 +128,9 @@ echo ""
 
 case "$CODE" in
     200|301|302) echo "Self-test: OK (HTTP $CODE through the proxy)" ;;
-    *)           echo "Self-test: FAILED (got '${CODE:-no response}'). Check: tail -n 30 ${LOG}" ;;
+    *)           echo "Self-test: FAILED (got '${CODE:-no response}'). Check: journalctl -u danted -n 30 --no-pager" ;;
 esac
 
 echo ""
 echo "Remember to allow TCP port ${PORT} in the Vultr firewall group."
-echo "Watch connections live with: tail -f ${LOG}"
+echo "Watch connections live with: journalctl -u danted -f"
