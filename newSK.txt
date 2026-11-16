@@ -187,6 +187,89 @@ if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     ufw allow "${PORT}/tcp" >/dev/null 2>&1 || true
 fi
 
+# ==============================================================================
+# INSTALL 'change-pass' WITH AUTOMATIC TELEGRAM SENDING
+# ==============================================================================
+cat << 'EOF' > /usr/local/bin/change-pass
+#!/bin/bash
+set -u
+
+if [ "$#" -lt 1 ]; then
+    echo "Usage: change-pass <IP> [OPTIONAL_USER_TAG] [OPTIONAL_TEAM_NAME]"
+    exit 1
+fi
+
+TARGET_IP="$1"
+NEW_USER="${2:-}"
+NEW_TEAM="${3:-}"
+
+# Load Telegram configuration
+[ -f /etc/proxy-telegram.conf ] && . /etc/proxy-telegram.conf
+PORT="${PORT:-8080}"
+TG_BOT_TOKEN="${TG_BOT_TOKEN:-}"
+TG_CHAT_ID="${TG_CHAT_ID:-}"
+
+# Load stored User & Team for this IP
+IP_INFO_FILE="/etc/proxy-nodes/${TARGET_IP}.info"
+STORED_USER="USER056"
+STORED_TEAM="黑虾团队"
+
+if [ -f "$IP_INFO_FILE" ]; then
+    STORED_USER=$(head -n 1 "$IP_INFO_FILE")
+    STORED_TEAM=$(sed -n '2p' "$IP_INFO_FILE")
+fi
+
+FINAL_USER="${NEW_USER:-$STORED_USER}"
+FINAL_TEAM="${NEW_TEAM:-$STORED_TEAM}"
+
+# Save updated info
+mkdir -p /etc/proxy-nodes
+echo "$FINAL_USER" > "$IP_INFO_FILE"
+echo "$FINAL_TEAM" >> "$IP_INFO_FILE"
+
+# Generate new random password
+NEW_PASS=$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)
+
+# Update Dante password file
+echo "root:$(openssl passwd -1 "$NEW_PASS")" > "/etc/danted-${TARGET_IP}.passwd"
+chmod 600 "/etc/danted-${TARGET_IP}.passwd"
+
+# Build SOCKS5 URL & QR Code
+AUTH_B64=$(echo -n "root:${NEW_PASS}" | base64 | tr -d '\n')
+SOCKS_URL="socks://${AUTH_B64}@${TARGET_IP}:${PORT}#${FINAL_USER}"
+
+qrencode -s 8 -m 2 -o "/tmp/qr_${TARGET_IP}.png" "$SOCKS_URL"
+
+# Build Caption with 1-click copyable fields (wrapped in ` `)
+CAPTION="\`${SOCKS_URL}\`
+
+${FINAL_TEAM}
+
+${FINAL_USER}
+-Protocol : \`SOCKS5\`
+-IP public : \`${TARGET_IP}\`
+-Port         : \`${PORT}\`
+-User         : \`root\`
+-Pass         : \`${NEW_PASS}\`"
+
+echo "=================================================="
+echo "$CAPTION"
+echo "=================================================="
+
+# SEND DIRECTLY TO TELEGRAM
+if [ -n "$TG_BOT_TOKEN" ] && [ "$TG_BOT_TOKEN" != "YOUR_BOT_TOKEN_HERE" ]; then
+    curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendPhoto" \
+        -F chat_id="${TG_CHAT_ID}" \
+        -F photo="@/tmp/qr_${TARGET_IP}.png" \
+        -F parse_mode="Markdown" \
+        -F caption="$CAPTION" >/dev/null 2>&1
+    echo "✅ Sent new QR code and details to Telegram!"
+fi
+
+rm -f "/tmp/qr_${TARGET_IP}.png"
+EOF
+chmod +x /usr/local/bin/change-pass
+
 sleep 2
 
 # Output & Send to Telegram
