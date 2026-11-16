@@ -1,5 +1,6 @@
 #!/bin/bash
-# SOCKS5 proxy (Dante) multi-IP installer with UNIQUE PASSWORDS per IP (User: root)
+# SOCKS5 proxy (Dante) multi-IP installer
+# Features: Unique auto-generated passwords per IP (User: root), persistent netplan, instant change-pass tool
 # Based on: https://github.com/BRAVO-IT/VPN (author: BRAVO_IT)
 
 set -u
@@ -14,7 +15,7 @@ PORT="${2:-8080}"
 PROXY_USER="root"
 [ "$EXTRA_RAW" = "-" ] && EXTRA_RAW=""
 
-# ---- network info ---------------------------------------------------------
+# ---- Network Detection ----------------------------------------------------
 IFACE=$(ip -4 route get 8.8.8.8 | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
 MAIN_IP=$(ip -4 route get 8.8.8.8 | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
 if [ -z "$IFACE" ] || [ -z "$MAIN_IP" ]; then
@@ -22,7 +23,7 @@ if [ -z "$IFACE" ] || [ -z "$MAIN_IP" ]; then
     exit 1
 fi
 
-# Multi-subnet routing support (rp_filter)
+# ---- Kernel multi-subnet support (rp_filter) ------------------------------
 sysctl -w net.ipv4.conf.all.rp_filter=2 >/dev/null 2>&1 || true
 sysctl -w net.ipv4.conf.default.rp_filter=2 >/dev/null 2>&1 || true
 sysctl -w net.ipv4.conf."${IFACE}".rp_filter=2 >/dev/null 2>&1 || true
@@ -32,12 +33,12 @@ net.ipv4.conf.all.rp_filter = 2
 net.ipv4.conf.default.rp_filter = 2
 SYSCTL
 
-# Install dependencies
+# ---- Install Dependencies -------------------------------------------------
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq dante-server libpam-pwdfile openssl curl iputils-arping
 
-# Add extra IPs
+# ---- Add and Announce Extra IPs -------------------------------------------
 EXTRA_IPS=""
 if [ -n "$EXTRA_RAW" ]; then
     for ip in $(echo "$EXTRA_RAW" | tr ',; \t\r' '\n\n\n\n\n'); do
@@ -52,7 +53,7 @@ if [ -n "$EXTRA_RAW" ]; then
         arping -U -c 2 -w 1 -I "$IFACE" "$ip" >/dev/null 2>&1 || true
     done
 
-    # Persist in Netplan
+    # Persist in Netplan across reboots
     if [ -n "$EXTRA_IPS" ] && command -v netplan >/dev/null 2>&1; then
         {
             echo "network:"
@@ -67,11 +68,10 @@ if [ -n "$EXTRA_RAW" ]; then
     fi
 fi
 
-# Stop default single-instance danted
+# ---- Systemd Multi-Instance Service ---------------------------------------
 systemctl stop danted >/dev/null 2>&1 || true
 systemctl disable danted >/dev/null 2>&1 || true
 
-# Systemd template service (no failing ExecStartPre, unique pid per IP)
 cat << 'EOF' > /etc/systemd/system/danted@.service
 [Unit]
 Description=SOCKS5 proxy daemon for %I
@@ -89,12 +89,10 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 
-# Gather all IPs
+# ---- Configure Each IP with its own Random Password ----------------------
 ALL_IPS=$(ip -4 -o addr show dev "$IFACE" scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
-
 NODE_LIST=()
 
-# Configure isolated instance per IP
 for ip in $ALL_IPS; do
     NODE_PASS=$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)
 
@@ -102,7 +100,7 @@ for ip in $ALL_IPS; do
     echo "${PROXY_USER}:$(openssl passwd -1 "$NODE_PASS")" > "/etc/danted-${ip}.passwd"
     chmod 600 "/etc/danted-${ip}.passwd"
 
-    # 2. PAM configuration for this IP
+    # 2. PAM service file for this IP
     cat << EOF > "/etc/pam.d/sockd-${ip}"
 auth required pam_pwdfile.so nodelay pwdfile=/etc/danted-${ip}.passwd
 account required pam_permit.so
@@ -140,21 +138,83 @@ socks pass {
 }
 EOF
 
-    # Enable and start service for this IP
+    # Enable & Start
     systemctl enable "danted@${ip}" >/dev/null 2>&1
     systemctl restart "danted@${ip}"
 
     NODE_LIST+=("${ip}:${PORT}:${PROXY_USER}:${NODE_PASS}")
 done
 
-# Firewall
+# ---- Firewall -------------------------------------------------------------
 if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     ufw allow "${PORT}/tcp" >/dev/null 2>&1 || true
 fi
 
+# ---- Install 'change-pass' Tool -------------------------------------------
+cat << 'EOF' > /usr/local/bin/change-pass
+#!/bin/bash
+set -u
+
+if [ "$#" -lt 1 ]; then
+    echo "Usage: change-pass <IP> [OPTIONAL_CUSTOM_PASSWORD]"
+    echo "       change-pass all"
+    exit 1
+fi
+
+TARGET_IP="$1"
+CUSTOM_PASS="${2:-}"
+
+update_ip() {
+    local ip="$1"
+    local new_pass="$2"
+
+    if [ -z "$new_pass" ]; then
+        new_pass=$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)
+    fi
+
+    local pass_file="/etc/danted-${ip}.passwd"
+
+    if [ -f "$pass_file" ] || [ -f "/etc/danted-${ip}.conf" ]; then
+        echo "root:$(openssl passwd -1 "$new_pass")" > "$pass_file"
+        chmod 600 "$pass_file"
+    else
+        echo "root:$(openssl passwd -1 "$new_pass")" > /etc/danted.passwd
+    fi
+
+    local out
+    out=$(curl -s -m 8 --socks5-hostname "${ip}:8080" --proxy-user "root:${new_pass}" https://ifconfig.me 2>/dev/null || true)
+    
+    if [ "$out" = "$ip" ]; then
+        echo "Address  : ${ip} -> [OK]"
+        echo "New Node : ${ip}:8080:root:${new_pass}"
+    else
+        echo "Address  : ${ip} -> [FAILED to connect]"
+        echo "New Node : ${ip}:8080:root:${new_pass}"
+    fi
+}
+
+echo "================================================================"
+if [ "$TARGET_IP" = "all" ]; then
+    echo "   ROTATING PASSWORDS FOR ALL PROXY NODES (AUTO-GENERATE)       "
+    echo "================================================================"
+    IFACE=$(ip -4 route get 8.8.8.8 | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+    ALL_IPS=$(ip -4 -o addr show dev "$IFACE" scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
+    for ip in $ALL_IPS; do
+        update_ip "$ip" ""
+        echo "----------------------------------------------------------------"
+    done
+else
+    echo "   UPDATING PASSWORD FOR ${TARGET_IP} (AUTO-GENERATE)           "
+    echo "================================================================"
+    update_ip "$TARGET_IP" "$CUSTOM_PASS"
+fi
+echo "================================================================"
+EOF
+chmod +x /usr/local/bin/change-pass
+
 sleep 2
 
-# Output and Self-test
+# ---- Output Node List & Test ----------------------------------------------
 echo ""
 echo "================================================================"
 echo "          YOUR SOCKS5 PROXIES (USER: root, RANDOM PASS)         "
@@ -180,4 +240,7 @@ for node in "${NODE_LIST[@]}"; do
         echo "Address  : ${node_ip} (root)   -> [FAILED]"
     fi
 done
+echo "================================================================"
+echo "Tip: To auto-generate a new password for any IP later, run:"
+echo "     change-pass <IP>    (or: change-pass all)"
 echo "================================================================"
