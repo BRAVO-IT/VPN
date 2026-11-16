@@ -45,7 +45,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq dante-server libpam-pwdfile openssl curl iputils-arping qrencode
 
-# ---- Parse IPs, Users, and Teams ------------------------------------------
+# ---- Parse IPs, Users, and Teams (Strict Order & No Duplicates) -----------
 TAG_PREFIX=$(echo "$DEFAULT_USER_TAG" | sed 's/[0-9]*$//')
 TAG_NUM_RAW=$(echo "$DEFAULT_USER_TAG" | grep -o '[0-9]*$')
 TAG_NUM_LEN=${#TAG_NUM_RAW}
@@ -54,6 +54,7 @@ TAG_NUM=${TAG_NUM_RAW:-0}
 declare -A IP_USER_MAP
 declare -A IP_TEAM_MAP
 EXTRA_IPS=""
+ORDERED_IPS=()
 COUNTER=0
 
 for item in $(echo "$RAW_INPUT" | tr ',; \t\r' '\n\n\n\n\n'); do
@@ -64,6 +65,7 @@ for item in $(echo "$RAW_INPUT" | tr ',; \t\r' '\n\n\n\n\n'); do
         continue
     fi
 
+    # Assign distinct user number
     if [ -n "$item_user" ]; then
         assigned_user="$item_user"
     else
@@ -78,14 +80,17 @@ for item in $(echo "$RAW_INPUT" | tr ',; \t\r' '\n\n\n\n\n'); do
     assigned_team="${item_team:-$DEFAULT_TEAM}"
     IP_USER_MAP["$item_ip"]="$assigned_user"
     IP_TEAM_MAP["$item_ip"]="$assigned_team"
+    ORDERED_IPS+=("$item_ip")
 
-    [ "$item_ip" = "$MAIN_IP" ] && continue
-
-    EXTRA_IPS="$EXTRA_IPS $item_ip"
-    ip addr show dev "$IFACE" | grep -qw "inet ${item_ip}/32" || ip addr add "${item_ip}/32" dev "$IFACE"
-    arping -U -c 2 -w 1 -I "$IFACE" "$item_ip" >/dev/null 2>&1 || true
-
+    # Increment counter unconditionally for each input IP
     COUNTER=$((COUNTER + 1))
+
+    # Only add to secondary IP list if not main IP
+    if [ "$item_ip" != "$MAIN_IP" ]; then
+        EXTRA_IPS="$EXTRA_IPS $item_ip"
+        ip addr show dev "$IFACE" | grep -qw "inet ${item_ip}/32" || ip addr add "${item_ip}/32" dev "$IFACE"
+        arping -U -c 2 -w 1 -I "$IFACE" "$item_ip" >/dev/null 2>&1 || true
+    fi
 done
 
 # Persist in Netplan
@@ -123,7 +128,7 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 
-# Save TG Credentials and nodes info
+# Save Telegram configuration
 cat << EOF > /etc/proxy-telegram.conf
 TG_BOT_TOKEN="${TG_BOT_TOKEN}"
 TG_CHAT_ID="${TG_CHAT_ID}"
@@ -131,10 +136,10 @@ PORT="${PORT}"
 EOF
 
 mkdir -p /etc/proxy-nodes
-ALL_IPS=$(ip -4 -o addr show dev "$IFACE" scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
 NODE_LIST=()
 
-for ip in $ALL_IPS; do
+# Configure in the exact order requested
+for ip in "${ORDERED_IPS[@]}"; do
     NODE_PASS=$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)
 
     echo "${PROXY_USER}:$(openssl passwd -1 "$NODE_PASS")" > "/etc/danted-${ip}.passwd"
@@ -172,10 +177,9 @@ EOF
     systemctl enable "danted@${ip}" >/dev/null 2>&1
     systemctl restart "danted@${ip}"
 
-    curr_user="${IP_USER_MAP[$ip]:-$DEFAULT_USER_TAG}"
-    curr_team="${IP_TEAM_MAP[$ip]:-$DEFAULT_TEAM}"
+    curr_user="${IP_USER_MAP[$ip]}"
+    curr_team="${IP_TEAM_MAP[$ip]}"
 
-    # Save to node info file for change-pass
     echo "$curr_user" > "/etc/proxy-nodes/${ip}.info"
     echo "$curr_team" >> "/etc/proxy-nodes/${ip}.info"
 
@@ -188,7 +192,7 @@ if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
 fi
 
 # ==============================================================================
-# INSTALL 'change-pass' WITH AUTOMATIC TELEGRAM SENDING
+# INSTALL 'change-pass' WITH INSTANT TELEGRAM NOTIFICATION
 # ==============================================================================
 cat << 'EOF' > /usr/local/bin/change-pass
 #!/bin/bash
@@ -203,13 +207,11 @@ TARGET_IP="$1"
 NEW_USER="${2:-}"
 NEW_TEAM="${3:-}"
 
-# Load Telegram configuration
 [ -f /etc/proxy-telegram.conf ] && . /etc/proxy-telegram.conf
 PORT="${PORT:-8080}"
 TG_BOT_TOKEN="${TG_BOT_TOKEN:-}"
 TG_CHAT_ID="${TG_CHAT_ID:-}"
 
-# Load stored User & Team for this IP
 IP_INFO_FILE="/etc/proxy-nodes/${TARGET_IP}.info"
 STORED_USER="USER056"
 STORED_TEAM="黑虾团队"
@@ -222,25 +224,20 @@ fi
 FINAL_USER="${NEW_USER:-$STORED_USER}"
 FINAL_TEAM="${NEW_TEAM:-$STORED_TEAM}"
 
-# Save updated info
 mkdir -p /etc/proxy-nodes
 echo "$FINAL_USER" > "$IP_INFO_FILE"
 echo "$FINAL_TEAM" >> "$IP_INFO_FILE"
 
-# Generate new random password
 NEW_PASS=$(openssl rand -hex 6 2>/dev/null || tr -dc 'a-z0-9' </dev/urandom | head -c 12)
 
-# Update Dante password file
 echo "root:$(openssl passwd -1 "$NEW_PASS")" > "/etc/danted-${TARGET_IP}.passwd"
 chmod 600 "/etc/danted-${TARGET_IP}.passwd"
 
-# Build SOCKS5 URL & QR Code
 AUTH_B64=$(echo -n "root:${NEW_PASS}" | base64 | tr -d '\n')
 SOCKS_URL="socks://${AUTH_B64}@${TARGET_IP}:${PORT}#${FINAL_USER}"
 
 qrencode -s 8 -m 2 -o "/tmp/qr_${TARGET_IP}.png" "$SOCKS_URL"
 
-# Build Caption with 1-click copyable fields (wrapped in ` `)
 CAPTION="\`${SOCKS_URL}\`
 
 ${FINAL_TEAM}
@@ -256,14 +253,18 @@ echo "=================================================="
 echo "$CAPTION"
 echo "=================================================="
 
-# SEND DIRECTLY TO TELEGRAM
 if [ -n "$TG_BOT_TOKEN" ] && [ "$TG_BOT_TOKEN" != "YOUR_BOT_TOKEN_HERE" ]; then
-    curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendPhoto" \
+    RESP=$(curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendPhoto" \
         -F chat_id="${TG_CHAT_ID}" \
         -F photo="@/tmp/qr_${TARGET_IP}.png" \
         -F parse_mode="Markdown" \
-        -F caption="$CAPTION" >/dev/null 2>&1
-    echo "✅ Sent new QR code and details to Telegram!"
+        -F caption="$CAPTION")
+    
+    if echo "$RESP" | grep -q '"ok":true'; then
+        echo "✅ Sent new QR code and details to Telegram group!"
+    else
+        echo "⚠️ Telegram Send Error: $RESP"
+    fi
 fi
 
 rm -f "/tmp/qr_${TARGET_IP}.png"
