@@ -1,5 +1,5 @@
 #!/bin/bash
-# SOCKS5 proxy (Dante) multi-IP installer with INDIVIDUAL USER & TEAM per IP
+# SOCKS5 proxy (Dante) multi-IP installer with TELEGRAM 1-CLICK COPY & QR CODE
 # Based on: https://github.com/BRAVO-IT/VPN (author: BRAVO_IT)
 
 set -u
@@ -46,7 +46,6 @@ apt-get update -qq
 apt-get install -y -qq dante-server libpam-pwdfile openssl curl iputils-arping qrencode
 
 # ---- Parse IPs, Users, and Teams ------------------------------------------
-# Extract base prefix and starting number if auto-increment is needed
 TAG_PREFIX=$(echo "$DEFAULT_USER_TAG" | sed 's/[0-9]*$//')
 TAG_NUM_RAW=$(echo "$DEFAULT_USER_TAG" | grep -o '[0-9]*$')
 TAG_NUM_LEN=${#TAG_NUM_RAW}
@@ -60,14 +59,11 @@ COUNTER=0
 for item in $(echo "$RAW_INPUT" | tr ',; \t\r' '\n\n\n\n\n'); do
     [ -z "$item" ] && continue
 
-    # Parse IP:USER:TEAM or plain IP
     IFS=':' read -r item_ip item_user item_team <<< "$item"
-
     if ! echo "$item_ip" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$'; then
         continue
     fi
 
-    # Determine User tag
     if [ -n "$item_user" ]; then
         assigned_user="$item_user"
     else
@@ -79,9 +75,7 @@ for item in $(echo "$RAW_INPUT" | tr ',; \t\r' '\n\n\n\n\n'); do
         fi
     fi
 
-    # Determine Team name
     assigned_team="${item_team:-$DEFAULT_TEAM}"
-
     IP_USER_MAP["$item_ip"]="$assigned_user"
     IP_TEAM_MAP["$item_ip"]="$assigned_team"
 
@@ -129,7 +123,14 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 
-# Configure Each IP
+# Save TG Credentials and nodes info
+cat << EOF > /etc/proxy-telegram.conf
+TG_BOT_TOKEN="${TG_BOT_TOKEN}"
+TG_CHAT_ID="${TG_CHAT_ID}"
+PORT="${PORT}"
+EOF
+
+mkdir -p /etc/proxy-nodes
 ALL_IPS=$(ip -4 -o addr show dev "$IFACE" scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
 NODE_LIST=()
 
@@ -171,9 +172,12 @@ EOF
     systemctl enable "danted@${ip}" >/dev/null 2>&1
     systemctl restart "danted@${ip}"
 
-    # Get mapped User and Team for this IP
     curr_user="${IP_USER_MAP[$ip]:-$DEFAULT_USER_TAG}"
     curr_team="${IP_TEAM_MAP[$ip]:-$DEFAULT_TEAM}"
+
+    # Save to node info file for change-pass
+    echo "$curr_user" > "/etc/proxy-nodes/${ip}.info"
+    echo "$curr_team" >> "/etc/proxy-nodes/${ip}.info"
 
     NODE_LIST+=("${ip}:${PORT}:${PROXY_USER}:${NODE_PASS}:${curr_user}:${curr_team}")
 done
@@ -185,10 +189,10 @@ fi
 
 sleep 2
 
-# ---- Output, Self-Test & Send to Telegram ---------------------------------
+# Output & Send to Telegram
 echo ""
 echo "================================================================"
-echo "          YOUR SOCKS5 PROXIES (INDIVIDUAL USER & TEAM)          "
+echo "          YOUR SOCKS5 PROXIES (1-CLICK COPYABLE)                "
 echo "================================================================"
 
 for node in "${NODE_LIST[@]}"; do
@@ -202,28 +206,27 @@ for node in "${NODE_LIST[@]}"; do
     AUTH_B64=$(echo -n "${node_user}:${node_pass}" | base64 | tr -d '\n')
     SOCKS_URL="socks://${AUTH_B64}@${node_ip}:${node_port}#${node_tag}"
 
-    CAPTION="${SOCKS_URL}
+    CAPTION="\`${SOCKS_URL}\`
 
 ${node_team}
 
 ${node_tag}
--Protocol : SOCKS5
--IP public : ${node_ip}
--Port     : ${node_port}
--User     : ${node_user}
--Pass     : ${node_pass}"
+-Protocol : \`SOCKS5\`
+-IP public : \`${node_ip}\`
+-Port         : \`${node_port}\`
+-User         : \`${node_user}\`
+-Pass         : \`${node_pass}\`"
 
     echo "$CAPTION"
     echo "----------------------------------------------------------------"
 
-    # Generate QR Code image
     qrencode -s 8 -m 2 -o "/tmp/qr_${node_ip}.png" "$SOCKS_URL"
 
-    # Send to Telegram
     if [ -n "$TG_BOT_TOKEN" ] && [ "$TG_BOT_TOKEN" != "YOUR_BOT_TOKEN_HERE" ]; then
         curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendPhoto" \
             -F chat_id="${TG_CHAT_ID}" \
             -F photo="@/tmp/qr_${node_ip}.png" \
+            -F parse_mode="Markdown" \
             -F caption="$CAPTION" >/dev/null 2>&1
     fi
 
@@ -232,6 +235,6 @@ done
 
 echo "================================================================"
 if [ -n "$TG_BOT_TOKEN" ] && [ "$TG_BOT_TOKEN" != "YOUR_BOT_TOKEN_HERE" ]; then
-    echo "✅ Sent all QR codes with their individual User and Team to Telegram!"
+    echo "✅ Sent 1-click copyable QR codes and details to Telegram!"
 fi
 echo "================================================================"
