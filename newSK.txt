@@ -12,8 +12,8 @@ fi
 # ==============================================================================
 # TELEGRAM CONFIGURATION
 # ==============================================================================
-TG_BOT_TOKEN="YOUR_BOT_TOKEN_HERE"      # Example: "7123456789:AAFnk..."
-TG_CHAT_ID="YOUR_CHAT_ID_HERE"          # Example: "123456789"
+TG_BOT_TOKEN="8328863761:AAF_RDhl9VKzqzvTEzZsh1i3AeAlbwtIImY"      # Example: "7123456789:AAFnk..."
+TG_CHAT_ID="1199333247"          # Example: "123456789"
 # ==============================================================================
 
 RAW_INPUT="${1:-}"
